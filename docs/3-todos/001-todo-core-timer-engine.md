@@ -123,7 +123,7 @@ Cursor deve verificare:
 2. presenza di file `.csproj`;
 3. target framework del progetto esistente;
 4. cartelle esistenti;
-5. eventuale presenza di `src/`;
+5. eventuale presenza di `models/`;
 6. eventuale presenza di `tests/`;
 7. eventuale progetto WPF esistente.
 
@@ -176,7 +176,7 @@ CicloTimer.Core
 Percorso consigliato:
 
 ```text
-src/CicloTimer.Core/
+models/CicloTimer.Core/
 ```
 
 Tipo progetto consigliato:
@@ -245,7 +245,7 @@ Se esiste una solution `.sln`, Cursor deve aggiungere i nuovi progetti alla solu
 Comandi indicativi, da adattare ai percorsi reali:
 
 ```text
-dotnet sln add src/CicloTimer.Core/CicloTimer.Core.csproj
+dotnet sln add models/CicloTimer.Core/CicloTimer.Core.csproj
 dotnet sln add tests/CicloTimer.Core.Tests/CicloTimer.Core.Tests.csproj
 ```
 
