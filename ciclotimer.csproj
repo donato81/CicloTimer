@@ -11,6 +11,7 @@
   <ItemGroup>
     <Compile Remove="models/**" />
     <Compile Remove="tests/**" />
+    <Compile Remove="locales/**" />
   </ItemGroup>
 
 </Project>
