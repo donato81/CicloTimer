@@ -2,7 +2,7 @@
 
 **Tipo documento:** documento di design  
 **Stato:** APPROVED  
-**Versione:** 0.2.0  
+**Versione:** 0.3.0  
 **Data:** 2026-06-02  
 **Repository:** donato81/CicloTimer  
 **Documenti collegati:** docs/0-architecture/vision.md, docs/0-architecture/architecture.md, docs/0-architecture/accessibility-rules.md, docs/0-architecture/document-standards.md, docs/0-architecture/internal-api.md, docs/1-design/001-design-core-timer-engine.md  
@@ -25,7 +25,15 @@ Il bridge previsto da questo documento deve essere collocato nella cartella fisi
 view-models
 ````
 
-Questa cartella è parte della struttura fissa del repository e non deve essere sostituita con `src`, `models` o altre cartelle inventate dagli agenti.
+Poiché il progetto usa C#/.NET, il bridge deve essere realizzato come progetto .NET separato, compilabile e referenziabile dalla solution.
+
+La collocazione fisica corretta è:
+
+```text
+view-models/CicloTimer.Bridge/
+```
+
+Questa scelta mantiene il bridge dentro la cartella logica `view-models`, ma evita che il codice del bridge diventi una semplice cartella non compilabile autonomamente.
 
 Lo scopo di questo documento è definire:
 
@@ -39,7 +47,8 @@ Lo scopo di questo documento è definire:
 8. preparazione dei testi accessibili;
 9. richieste concettuali verso il futuro livello sistema operativo;
 10. criteri di testabilità del bridge;
-11. collocazione fisica corretta nella cartella `view-models`.
+11. collocazione fisica corretta nella cartella `view-models`;
+12. relazione progettuale con core, UI futura e test.
 
 Questo documento non definisce ancora:
 
@@ -64,7 +73,7 @@ Questi aspetti saranno trattati in documenti successivi.
 
 ## 2. Obiettivo del design
 
-L'obiettivo è progettare un bridge semplice, sottile e testabile.
+L'obiettivo è progettare un bridge semplice, sottile, testabile e compilabile come modulo autonomo.
 
 Il bridge deve ricevere comandi dalla futura UI, chiamare il core e produrre un modello mostrabile pronto per la UI.
 
@@ -136,7 +145,10 @@ Questo design può definire:
 10. richieste concettuali verso il livello sistema operativo;
 11. criteri minimi di testabilità del bridge;
 12. vincoli per la futura implementazione C#;
-13. collocazione nella cartella `view-models`.
+13. collocazione nella cartella `view-models`;
+14. creazione di un progetto .NET separato per il bridge;
+15. dipendenza del bridge dal core;
+16. futura dipendenza della UI dal bridge.
 
 Questo design non può definire:
 
@@ -270,6 +282,16 @@ La fonte primaria dello stato corrente resta TimerEngine.
 ```
 
 Il bridge deve quindi usare il risultato del comando per capire l'esito immediato dell'azione, ma deve considerare il core come fonte principale dello stato corrente.
+
+Il progetto bridge deve dipendere dal progetto core:
+
+```text
+CicloTimer.Bridge
+↓
+CicloTimer.Core
+```
+
+Il progetto core non deve dipendere dal bridge.
 
 ---
 
@@ -1072,7 +1094,7 @@ TimerDisplayModel aggiornato
 eventuali richieste concettuali verso il livello sistema operativo
 ```
 
-Non viene imposto in questo design un wrapper obbligatorio come `TimerBridgeResult`.
+Non viene imposto in questo design un wrapper complesso come `TimerBridgeResult`.
 
 La scelta concreta sarà definita nel coding plan.
 
@@ -1087,7 +1109,7 @@ Sono opzioni ammissibili per la futura implementazione:
 1. restituire direttamente `TimerDisplayModel`;
 2. restituire `TimerDisplayModel` più una lista di richieste concettuali;
 3. mantenere un `TimerDisplayModel` aggiornato nel bridge;
-4. usare una piccola struttura di risultato solo se il coding plan dimostra che semplifica il codice.
+4. usare una piccola struttura di aggiornamento solo se il coding plan dimostra che semplifica il codice.
 
 Non sono ammissibili:
 
@@ -1482,7 +1504,19 @@ Il bridge non deve dipendere da:
 11. cloud;
 12. file di configurazione esterni non approvati.
 
-Per la prima implementazione, il bridge deve essere collocato in `view-models`.
+Il bridge deve essere un progetto .NET separato e deve usare un target non Windows-specifico, coerente con il core.
+
+Target previsto:
+
+```text
+net9.0
+```
+
+Il bridge non deve usare:
+
+```text
+net9.0-windows
+```
 
 ---
 
@@ -1499,27 +1533,25 @@ models/CicloTimer.Core/
 Il bridge / modello mostrabile deve invece essere collocato in:
 
 ```text
-view-models/
+view-models/CicloTimer.Bridge/
 ```
 
-Per la prima versione, la collocazione obbligatoria è:
+Il progetto bridge deve avere un proprio file `.csproj`:
 
 ```text
-view-models/TimerBridge/
+view-models/CicloTimer.Bridge/CicloTimer.Bridge.csproj
 ```
-
-Questa scelta è deliberatamente semplice.
-
-Non viene creato in questo design un progetto separato `CicloTimer.Bridge`.
 
 La struttura corretta è:
 
 ```text
 models/
   CicloTimer.Core/
+    CicloTimer.Core.csproj
 
 view-models/
-  TimerBridge/
+  CicloTimer.Bridge/
+    CicloTimer.Bridge.csproj
 ```
 
 Regola vincolante:
@@ -1527,26 +1559,26 @@ Regola vincolante:
 ```text
 non creare src/
 non creare models/CicloTimer.Bridge/
-non creare view-models/CicloTimer.Bridge/ in questa versione
+non creare view-models/TimerBridge/ come semplice cartella di codice non progettuale
 non collocare il bridge nella UI WPF
 non collocare il bridge nel progetto core
 ```
 
-Il codice del bridge può referenziare `CicloTimer.Core`.
+Il progetto `CicloTimer.Bridge` deve referenziare `CicloTimer.Core`.
 
 Il progetto `CicloTimer.Core` non deve referenziare il bridge.
 
 Il progetto WPF non deve ancora essere modificato in questo design.
 
-I test del bridge potranno essere collocati in:
+In futuro, quando sarà progettata la UI, il progetto WPF potrà referenziare `CicloTimer.Bridge`.
+
+I test del bridge dovranno essere collocati in:
 
 ```text
 tests/CicloTimer.Bridge.Tests/
 ```
 
-Questa collocazione dei test resta coerente con la struttura già usata per il core.
-
-Il coding plan dovrà verificare la struttura reale del repository prima di creare file, ma non potrà cambiare la cartella radice `view-models/TimerBridge/`.
+e dovranno referenziare il progetto bridge, non il progetto WPF.
 
 ---
 
@@ -1582,47 +1614,78 @@ poi collegare la UI
 poi collegare audio e integrazioni Windows
 ```
 
+La catena di dipendenze prevista a regime è:
+
+```text
+ciclotimer WPF
+↓
+CicloTimer.Bridge
+↓
+CicloTimer.Core
+```
+
+La catena di test prevista è:
+
+```text
+CicloTimer.Core.Tests
+↓
+CicloTimer.Core
+```
+
+```text
+CicloTimer.Bridge.Tests
+↓
+CicloTimer.Bridge
+↓
+CicloTimer.Core
+```
+
 ---
 
 ## 35. Criteri di validità
 
 Il design sarà rispettato se una futura implementazione:
 
-1. crea il bridge dentro `view-models/TimerBridge/`;
-2. non crea `src`;
-3. non crea `models/CicloTimer.Bridge`;
-4. non crea `view-models/CicloTimer.Bridge` in questa versione;
-5. mantiene il core indipendente dal bridge;
-6. non modifica il comportamento del core;
-7. converte minuti e secondi UI in secondi totali;
-8. invia configurazioni neutre al core;
-9. formatta `RemainingSeconds` fuori dal core;
-10. produce `RemainingTimeText`;
-11. produce `TimerStateText`;
-12. produce `CompletedSessionsText`;
-13. produce messaggi errore da errori neutri;
-14. produce messaggi evento da eventi neutri;
-15. usa testi statici centralizzati;
-16. non inserisce stringhe utente hardcoded sparse;
-17. non duplica la validazione logica;
-18. non incrementa il contatore fuori dal core;
-19. non simula la ripartenza automatica;
-20. non possiede una sorgente temporale;
-21. non genera tick;
-22. non chiama direttamente API Windows;
-23. non riproduce audio reale;
-24. non usa WPF;
-25. non usa XAML;
-26. non usa NVDA;
-27. non usa UI Automation;
-28. è testabile senza UI;
-29. produce un modello mostrabile coerente dopo ogni comando;
-30. mantiene eventi non cumulativi e ordinati;
-31. sintetizza eventi multipli solo se presenti nello stesso `TimerCommandResult`;
-32. non gestisce lo stesso evento tramite più canali;
-33. usa il primo errore della lista in caso di errori multipli;
-34. produce sempre `AccessibleStatusText`;
-35. produce sempre `AccessibleEventText`, anche se vuoto o uguale al testo evento visivo.
+1. crea il bridge dentro `view-models/CicloTimer.Bridge/`;
+2. crea `view-models/CicloTimer.Bridge/CicloTimer.Bridge.csproj`;
+3. non crea `src`;
+4. non crea `models/CicloTimer.Bridge`;
+5. non crea `view-models/TimerBridge/` come semplice cartella di codice non progettuale;
+6. mantiene il core indipendente dal bridge;
+7. fa dipendere il bridge dal core;
+8. non fa dipendere il core dal bridge;
+9. non modifica il comportamento del core;
+10. converte minuti e secondi UI in secondi totali;
+11. invia configurazioni neutre al core;
+12. formatta `RemainingSeconds` fuori dal core;
+13. produce `RemainingTimeText`;
+14. produce `TimerStateText`;
+15. produce `CompletedSessionsText`;
+16. produce messaggi errore da errori neutri;
+17. produce messaggi evento da eventi neutri;
+18. usa testi statici centralizzati;
+19. non inserisce stringhe utente hardcoded sparse;
+20. non duplica la validazione logica;
+21. non incrementa il contatore fuori dal core;
+22. non simula la ripartenza automatica;
+23. non possiede una sorgente temporale;
+24. non genera tick;
+25. non chiama direttamente API Windows;
+26. non riproduce audio reale;
+27. non usa WPF;
+28. non usa XAML;
+29. non usa NVDA;
+30. non usa UI Automation;
+31. è testabile senza UI;
+32. produce un modello mostrabile coerente dopo ogni comando;
+33. mantiene eventi non cumulativi e ordinati;
+34. sintetizza eventi multipli solo se presenti nello stesso `TimerCommandResult`;
+35. non gestisce lo stesso evento tramite più canali;
+36. usa il primo errore della lista in caso di errori multipli;
+37. produce sempre `AccessibleStatusText`;
+38. produce sempre `AccessibleEventText`, anche se vuoto o uguale al testo evento visivo;
+39. crea test bridge in `tests/CicloTimer.Bridge.Tests/`;
+40. i test del bridge referenziano il progetto bridge e non il progetto WPF.
 
 ---
 
@@ -1632,7 +1695,7 @@ L'implementazione non è valida se:
 
 1. il bridge viene creato in `src`;
 2. il bridge viene creato in `models/CicloTimer.Bridge`;
-3. il bridge viene creato in `view-models/CicloTimer.Bridge` in questa versione;
+3. il bridge viene creato come semplice cartella `view-models/TimerBridge/` priva di progetto `.csproj`;
 4. il bridge viene creato dentro il progetto WPF;
 5. il bridge viene creato dentro il progetto core;
 6. il bridge contiene logica del timer;
@@ -1660,7 +1723,9 @@ L'implementazione non è valida se:
 28. il bridge sintetizza eventi multipli provenienti da result separati;
 29. la UI futura deve tradurre codici tecnici in testi;
 30. il core viene modificato per esigenze del bridge senza nuovo design;
-31. vengono introdotte funzionalità fuori perimetro.
+31. il progetto bridge usa `net9.0-windows`;
+32. i test del bridge referenziano il progetto WPF invece del progetto bridge;
+33. vengono introdotte funzionalità fuori perimetro.
 
 ---
 
@@ -1668,19 +1733,25 @@ L'implementazione non è valida se:
 
 Le seguenti decisioni sono consolidate in questa versione:
 
-1. il bridge deve stare in `view-models/TimerBridge/`;
-2. non si usa `src`;
-3. non si usa `models/CicloTimer.Bridge/`;
-4. non si usa `view-models/CicloTimer.Bridge/` in questa versione;
-5. il nome concettuale del modello è `TimerDisplayModel`;
-6. non viene imposto un wrapper obbligatorio `TimerBridgeResult`;
-7. `SystemActionRequest` resta un concetto, non una classe obbligatoria;
-8. in caso di più errori, il bridge mostra il primo errore della lista;
-9. il formato del tempo resta `mm:ss`;
-10. il bridge produce sempre i testi accessibili previsti dal modello;
-11. il bridge non possiede e non genera tick;
-12. il bridge non mantiene coda storica di eventi;
-13. gli eventi multipli vengono sintetizzati solo se presenti nello stesso `TimerCommandResult`.
+1. il bridge deve stare in `view-models/CicloTimer.Bridge/`;
+2. il bridge deve essere un progetto .NET separato con proprio `.csproj`;
+3. non si usa `src`;
+4. non si usa `models/CicloTimer.Bridge/`;
+5. non si usa `view-models/TimerBridge/` come semplice cartella non progettuale;
+6. il progetto bridge usa target `net9.0`;
+7. il progetto bridge referenzia `CicloTimer.Core`;
+8. il progetto core non referenzia il bridge;
+9. i test bridge referenziano il progetto bridge;
+10. la UI WPF referenzierà il bridge solo in un design successivo;
+11. il nome concettuale del modello è `TimerDisplayModel`;
+12. non viene imposto un wrapper complesso `TimerBridgeResult`;
+13. `SystemActionRequest` resta un concetto, non una classe obbligatoria;
+14. in caso di più errori, il bridge mostra il primo errore della lista;
+15. il formato del tempo resta `mm:ss`;
+16. il bridge produce sempre i testi accessibili previsti dal modello;
+17. il bridge non possiede e non genera tick;
+18. il bridge non mantiene coda storica di eventi;
+19. gli eventi multipli vengono sintetizzati solo se presenti nello stesso `TimerCommandResult`.
 
 ---
 
@@ -1719,7 +1790,9 @@ Il futuro coding plan dovrà prevedere test per:
 29. produzione di richiesta `StopFinalAlertSound` su fine sessione o pausa in avviso finale;
 30. mancata produzione di annunci automatici a ogni tick;
 31. gestione coerente di result con eventi vuoti;
-32. gestione coerente di result con errori.
+32. gestione coerente di result con errori;
+33. corretta dipendenza `CicloTimer.Bridge → CicloTimer.Core`;
+34. assenza di dipendenza da progetto WPF nei test bridge.
 
 ---
 
@@ -1730,14 +1803,15 @@ Questo documento è approvato come Design 002 — Bridge UI-logica e modello mos
 Versione corrente:
 
 ```text
-0.2.0 — approvazione dopo revisione DeepSeek/Gemini e consolidamento della collocazione in view-models/TimerBridge/
+0.3.0 — aggiornamento strutturale per progetto .NET separato in view-models/CicloTimer.Bridge/
 ```
 
 Cronologia:
 
 ```text
 0.1.0 — prima bozza ChatGPT con collocazione vincolante in view-models
-0.2.0 — integrazione delle osservazioni dei consiglieri AI: collocazione definitiva view-models/TimerBridge/, divieto di tick generati dal bridge, produzione costante dei testi accessibili, sintesi eventi solo nello stesso TimerCommandResult e conferma del modello TimerDisplayModel
+0.2.0 — integrazione delle osservazioni dei consiglieri AI: collocazione view-models/TimerBridge/, divieto di tick generati dal bridge, produzione costante dei testi accessibili, sintesi eventi solo nello stesso TimerCommandResult e conferma del modello TimerDisplayModel
+0.3.0 — revisione dopo chiarimento su struttura C#/.NET: il bridge diventa progetto separato in view-models/CicloTimer.Bridge/ con dipendenza da CicloTimer.Core
 ```
 
 Il documento è stato revisionato dal consiglio AI formato da:
@@ -1748,17 +1822,20 @@ DeepSeek
 Gemini
 ```
 
-Le osservazioni integrate sono:
+Le decisioni integrate sono:
 
 1. chiarimento che il bridge non genera tick e non possiede sorgente temporale;
-2. scelta della cartella semplice `view-models/TimerBridge/` per la prima versione;
+2. scelta del progetto separato `view-models/CicloTimer.Bridge/`;
 3. conferma del nome `TimerDisplayModel`;
-4. conferma della non obbligatorietà di `TimerBridgeResult`;
+4. conferma della non obbligatorietà di un wrapper complesso `TimerBridgeResult`;
 5. conferma di `SystemActionRequest` come concetto e non tipo obbligatorio;
 6. scelta del primo errore della lista in caso di errori multipli;
 7. produzione costante di `AccessibleStatusText` e `AccessibleEventText`;
 8. chiarimento che gli eventi multipli possono essere sintetizzati solo se presenti nello stesso `TimerCommandResult`;
 9. conferma del formato tempo `mm:ss`;
-10. conferma del divieto di UI, XAML, WPF, NVDA, UI Automation, audio reale, API Windows e timer reali nel bridge.
+10. conferma del divieto di UI, XAML, WPF, NVDA, UI Automation, audio reale, API Windows e timer reali nel bridge;
+11. chiarimento della catena di dipendenze `ciclotimer WPF → CicloTimer.Bridge → CicloTimer.Core` per i futuri design;
+12. chiarimento che i test del bridge devono referenziare il progetto bridge e non il progetto WPF.
 
 Il documento è approvato dal project owner come base per il successivo coding plan del Bridge UI-logica.
+
