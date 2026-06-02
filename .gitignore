@@ -53,3 +53,17 @@ dkms.conf
 
 # Personal workspace
 Personal-Work-Space/
+
+# .NET build and tooling
+bin/
+obj/
+**/bin/
+**/obj/
+.vs/
+TestResults/
+*.user
+*.suo
+*.nupkg
+*.trx
+*.coverage
+*.coveragexml
