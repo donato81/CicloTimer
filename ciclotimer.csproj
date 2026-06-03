@@ -12,6 +12,7 @@
     <Compile Remove="models/**" />
     <Compile Remove="tests/**" />
     <Compile Remove="locales/**" />
+    <Compile Remove="view-models/**" />
   </ItemGroup>
 
 </Project>

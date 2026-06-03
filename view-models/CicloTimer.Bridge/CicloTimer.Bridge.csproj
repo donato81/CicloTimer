@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CicloTimer.Bridge</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\models\CicloTimer.Core\CicloTimer.Core.csproj" />
+    <ProjectReference Include="..\..\locales\CicloTimer.Localization\CicloTimer.Localization.csproj" />
+  </ItemGroup>
+</Project>
