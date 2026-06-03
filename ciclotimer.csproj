@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <Compile Remove="models/**" />
+    <Compile Remove="services/**" />
     <Compile Remove="tests/**" />
     <Compile Remove="locales/**" />
     <Compile Remove="view-models/**" />

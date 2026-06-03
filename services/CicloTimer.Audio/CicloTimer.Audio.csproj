@@ -1,0 +1,72 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CicloTimer.Audio</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Windows.Extensions" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\final-alert.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <UsingTask
+    TaskName="GenerateFinalAlertWav"
+    TaskFactory="RoslynCodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <OutputFile ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Text" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+const int sampleRate = 44100;
+const double durationSeconds = 0.3;
+const double frequency = 880.0;
+const short amplitude = 12000;
+int sampleCount = (int)(sampleRate * durationSeconds);
+int dataSize = sampleCount * sizeof(short);
+
+Directory.CreateDirectory(Path.GetDirectoryName(OutputFile)!);
+
+using MemoryStream stream = new();
+using BinaryWriter writer = new(stream, Encoding.ASCII, leaveOpen: true);
+
+writer.Write(Encoding.ASCII.GetBytes("RIFF"));
+writer.Write(36 + dataSize);
+writer.Write(Encoding.ASCII.GetBytes("WAVE"));
+writer.Write(Encoding.ASCII.GetBytes("fmt "));
+writer.Write(16);
+writer.Write((short)1);
+writer.Write((short)1);
+writer.Write(sampleRate);
+writer.Write(sampleRate * sizeof(short));
+writer.Write((short)sizeof(short));
+writer.Write((short)16);
+writer.Write(Encoding.ASCII.GetBytes("data"));
+writer.Write(dataSize);
+
+for (int i = 0; i < sampleCount; i++)
+{
+    short sample = (short)(Math.Sin(2.0 * Math.PI * frequency * i / sampleRate) * amplitude);
+    writer.Write(sample);
+}
+
+writer.Flush();
+File.WriteAllBytes(OutputFile, stream.ToArray());
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="GenerateFinalAlertWavAsset" BeforeTargets="BeforeBuild" Condition="!Exists('Assets\final-alert.wav')">
+    <GenerateFinalAlertWav OutputFile="$(MSBuildProjectDirectory)\Assets\final-alert.wav" />
+  </Target>
+</Project>
