@@ -1,0 +1,201 @@
+{
+  "version": 3,
+  "targets": {
+    "net9.0-windows7.0": {
+      "System.Windows.Extensions/9.0.0": {
+        "type": "package",
+        "compile": {
+          "lib/net9.0/System.Windows.Extensions.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net9.0/System.Windows.Extensions.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtimeTargets": {
+          "runtimes/win/lib/net9.0/System.Windows.Extensions.dll": {
+            "assetType": "runtime",
+            "rid": "win"
+          }
+        }
+      },
+      "CicloTimer.Audio/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "System.Windows.Extensions": "9.0.0"
+        },
+        "compile": {
+          "bin/placeholder/CicloTimer.Audio.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/CicloTimer.Audio.dll": {}
+        }
+      },
+      "CicloTimer.Bridge/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "dependencies": {
+          "CicloTimer.Core": "1.0.0",
+          "CicloTimer.Localization": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/CicloTimer.Bridge.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/CicloTimer.Bridge.dll": {}
+        }
+      },
+      "CicloTimer.Core/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "compile": {
+          "bin/placeholder/CicloTimer.Core.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/CicloTimer.Core.dll": {}
+        }
+      },
+      "CicloTimer.Localization/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "compile": {
+          "bin/placeholder/CicloTimer.Localization.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/CicloTimer.Localization.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "System.Windows.Extensions/9.0.0": {
+      "sha512": "U9msthvnH2Fsw7xwAvIhNHOdnIjOQTwOc8Vd0oGOsiRcGMGoBFlUD6qtYawRUoQdKH9ysxesZ9juFElt1Jw/7A==",
+      "type": "package",
+      "path": "system.windows.extensions/9.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "LICENSE.TXT",
+        "PACKAGE.md",
+        "THIRD-PARTY-NOTICES.TXT",
+        "lib/net8.0/System.Windows.Extensions.dll",
+        "lib/net8.0/System.Windows.Extensions.xml",
+        "lib/net9.0/System.Windows.Extensions.dll",
+        "lib/net9.0/System.Windows.Extensions.xml",
+        "runtimes/win/lib/net8.0/System.Windows.Extensions.dll",
+        "runtimes/win/lib/net8.0/System.Windows.Extensions.xml",
+        "runtimes/win/lib/net9.0/System.Windows.Extensions.dll",
+        "runtimes/win/lib/net9.0/System.Windows.Extensions.xml",
+        "system.windows.extensions.9.0.0.nupkg.sha512",
+        "system.windows.extensions.nuspec",
+        "useSharedDesignerContext.txt"
+      ]
+    },
+    "CicloTimer.Audio/1.0.0": {
+      "type": "project",
+      "path": "../CicloTimer.Audio/CicloTimer.Audio.csproj",
+      "msbuildProject": "../CicloTimer.Audio/CicloTimer.Audio.csproj"
+    },
+    "CicloTimer.Bridge/1.0.0": {
+      "type": "project",
+      "path": "../../view-models/CicloTimer.Bridge/CicloTimer.Bridge.csproj",
+      "msbuildProject": "../../view-models/CicloTimer.Bridge/CicloTimer.Bridge.csproj"
+    },
+    "CicloTimer.Core/1.0.0": {
+      "type": "project",
+      "path": "../../models/CicloTimer.Core/CicloTimer.Core.csproj",
+      "msbuildProject": "../../models/CicloTimer.Core/CicloTimer.Core.csproj"
+    },
+    "CicloTimer.Localization/1.0.0": {
+      "type": "project",
+      "path": "../../locales/CicloTimer.Localization/CicloTimer.Localization.csproj",
+      "msbuildProject": "../../locales/CicloTimer.Localization/CicloTimer.Localization.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net9.0-windows7.0": [
+      "CicloTimer.Audio >= 1.0.0",
+      "CicloTimer.Bridge >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\forbi\\AppData\\Local\\Temp\\cursor-sandbox-cache\\5d8375296dc3e3c0e5f5e0a674525d3c\\nuget": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "C:\\Sviluppo\\CicloTimer\\services\\CicloTimer.App\\CicloTimer.App.csproj",
+      "projectName": "CicloTimer.App",
+      "projectPath": "C:\\Sviluppo\\CicloTimer\\services\\CicloTimer.App\\CicloTimer.App.csproj",
+      "packagesPath": "C:\\Users\\forbi\\AppData\\Local\\Temp\\cursor-sandbox-cache\\5d8375296dc3e3c0e5f5e0a674525d3c\\nuget",
+      "outputPath": "C:\\Sviluppo\\CicloTimer\\services\\CicloTimer.App\\obj\\",
+      "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
+      "configFilePaths": [
+        "C:\\Users\\forbi\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+      ],
+      "originalTargetFrameworks": [
+        "net9.0-windows"
+      ],
+      "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net9.0-windows7.0": {
+          "targetAlias": "net9.0-windows",
+          "projectReferences": {
+            "C:\\Sviluppo\\CicloTimer\\services\\CicloTimer.Audio\\CicloTimer.Audio.csproj": {
+              "projectPath": "C:\\Sviluppo\\CicloTimer\\services\\CicloTimer.Audio\\CicloTimer.Audio.csproj"
+            },
+            "C:\\Sviluppo\\CicloTimer\\view-models\\CicloTimer.Bridge\\CicloTimer.Bridge.csproj": {
+              "projectPath": "C:\\Sviluppo\\CicloTimer\\view-models\\CicloTimer.Bridge\\CicloTimer.Bridge.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "9.0.300"
+    },
+    "frameworks": {
+      "net9.0-windows7.0": {
+        "targetAlias": "net9.0-windows",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.314/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "IEti8+VPBs8=",
+  "success": true,
+  "projectFilePath": "C:\\Sviluppo\\CicloTimer\\services\\CicloTimer.App\\CicloTimer.App.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\forbi\\AppData\\Local\\Temp\\cursor-sandbox-cache\\5d8375296dc3e3c0e5f5e0a674525d3c\\nuget\\system.windows.extensions\\9.0.0\\system.windows.extensions.9.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

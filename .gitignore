@@ -67,3 +67,7 @@ TestResults/
 *.trx
 *.coverage
 *.coveragexml
+
+# CicloTimer source projects whose names end with .App
+!services/CicloTimer.App/
+!services/CicloTimer.App/**
