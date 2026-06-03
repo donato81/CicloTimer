@@ -2,10 +2,10 @@
 
 **Tipo documento:** documento di design  
 **Stato:** APPROVED  
-**Versione:** 0.3.0  
-**Data:** 2026-06-02  
+**Versione:** 0.5.0  
+**Data:** 2026-06-03  
 **Repository:** donato81/CicloTimer  
-**Documenti collegati:** docs/0-architecture/vision.md, docs/0-architecture/architecture.md, docs/0-architecture/accessibility-rules.md, docs/0-architecture/document-standards.md, docs/0-architecture/internal-api.md, docs/1-design/001-design-core-timer-engine.md  
+**Documenti collegati:** docs/0-architecture/vision.md, docs/0-architecture/architecture.md, docs/0-architecture/accessibility-rules.md, docs/0-architecture/document-standards.md, docs/0-architecture/internal-api.md, docs/1-design/001-design-core-timer-engine.md, docs/1-design/003-design-sistema-testi-centralizzati.md  
 
 ---
 
@@ -15,9 +15,13 @@ Questo documento definisce il design tecnico del Bridge UI-logica del timer di C
 
 Il Design 001 ha definito e isolato il core timer engine.
 
+Il Design 003 ha definito e implementato il sistema centralizzato dei testi e dei messaggi applicativi.
+
 Il core timer engine espone dati neutri, stati neutri, eventi neutri, errori neutri e risultati di comando.
 
-Il Bridge UI-logica ha il compito di collegare questi dati neutri alla futura UI, senza contaminare il core e senza trasformare la UI in una seconda logica applicativa.
+Il sistema `CicloTimer.Localization` espone testi utente centralizzati, chiavi tipizzate e template testuali in italiano, con struttura predisposta per lingue future.
+
+Il Bridge UI-logica ha il compito di collegare i dati neutri del core alla futura UI, usando il sistema centralizzato dei testi, senza contaminare il core e senza trasformare la UI in una seconda logica applicativa.
 
 Il bridge previsto da questo documento deve essere collocato nella cartella fisica già prevista dal progetto:
 
@@ -39,16 +43,19 @@ Lo scopo di questo documento è definire:
 
 1. responsabilità del bridge;
 2. responsabilità vietate al bridge;
-3. modello mostrabile del timer;
-4. trasformazione dei dati neutri in dati mostrabili;
-5. conversione dei valori provenienti dalla UI;
-6. formattazione del tempo rimanente;
-7. trasformazione di stati, eventi ed errori in testi utente;
-8. preparazione dei testi accessibili;
-9. richieste concettuali verso il futuro livello sistema operativo;
-10. criteri di testabilità del bridge;
-11. collocazione fisica corretta nella cartella `view-models`;
-12. relazione progettuale con core, UI futura e test.
+3. relazione del bridge con `CicloTimer.Core`;
+4. relazione del bridge con `CicloTimer.Localization`;
+5. modello mostrabile del timer;
+6. aggiornamento prodotto dal bridge;
+7. trasformazione dei dati neutri in dati mostrabili;
+8. conversione dei valori provenienti dalla UI;
+9. formattazione del tempo rimanente;
+10. trasformazione di stati, eventi ed errori in testi utente centralizzati;
+11. preparazione dei testi accessibili;
+12. richieste concettuali verso il futuro livello audio/sistema operativo;
+13. criteri di testabilità del bridge;
+14. collocazione fisica corretta nella cartella `view-models`;
+15. relazione progettuale con core, localization, UI futura, audio futuro e test.
 
 Questo documento non definisce ancora:
 
@@ -62,10 +69,12 @@ Questo documento non definisce ancora:
 8. audio reale;
 9. file audio;
 10. API Windows;
-11. gestione avanzata del volume di sistema;
-12. notifiche Windows concrete;
-13. coding plan operativo;
-14. todo eseguibile da Cursor.
+11. gestione audio focus;
+12. interruzione o attenuazione dell'audio di altre applicazioni;
+13. ripristino dei volumi di altre applicazioni;
+14. notifiche Windows concrete;
+15. coding plan operativo;
+16. todo eseguibile da Cursor.
 
 Questi aspetti saranno trattati in documenti successivi.
 
@@ -75,7 +84,9 @@ Questi aspetti saranno trattati in documenti successivi.
 
 L'obiettivo è progettare un bridge semplice, sottile, testabile e compilabile come modulo autonomo.
 
-Il bridge deve ricevere comandi dalla futura UI, chiamare il core e produrre un modello mostrabile pronto per la UI.
+Il bridge deve ricevere comandi dalla futura UI, chiamare il core e produrre un aggiornamento mostrabile pronto per la UI e per il futuro orchestratore.
+
+Il bridge deve usare `CicloTimer.Localization` per tutti i testi utente.
 
 Il bridge deve trasformare dati neutri come:
 
@@ -95,9 +106,29 @@ Tempo rimanente: 04:59
 Stato timer: Sessione in corso
 Sessioni completate: 3
 Azione principale: Pausa
-Messaggio evento: Timer avviato
+Messaggio evento: Timer avviato.
 Messaggio errore: nessuno
 ```
+
+Il bridge può inoltre produrre richieste concettuali verso un futuro livello audio/sistema operativo.
+
+Esempio:
+
+```text
+FinalAlertStarted
+↓
+Bridge
+↓
+SystemActionRequest.StartFinalAlertSound
+```
+
+Il bridge non deve eseguire direttamente l'audio.
+
+Il bridge non deve fermare direttamente musica, video o altre applicazioni.
+
+Il bridge non deve chiamare API Windows.
+
+Il bridge deve solo produrre richieste concettuali testabili.
 
 Il bridge non deve decidere le regole del timer.
 
@@ -110,9 +141,9 @@ Il bridge non deve simulare la ripartenza automatica.
 Il bridge deve essere un traduttore controllato tra:
 
 ```text
-UI
+UI futura
 ↓
-Bridge / modello mostrabile
+Bridge / aggiornamento mostrabile
 ↓
 Core
 ```
@@ -122,9 +153,9 @@ e tra:
 ```text
 Core
 ↓
-Bridge / modello mostrabile
+Bridge / aggiornamento mostrabile + richieste concettuali
 ↓
-UI futura / futuro livello sistema operativo
+UI futura / orchestratore futuro / audio service futuro
 ```
 
 ---
@@ -137,18 +168,21 @@ Questo design può definire:
 2. dati che la UI può passare al bridge;
 3. comandi che il bridge può inviare al core;
 4. dati che il bridge può leggere dal core;
-5. struttura concettuale del modello mostrabile;
-6. testi utente che il bridge deve preparare;
-7. formato del tempo rimanente;
-8. regole di conversione minuti/secondi in secondi totali;
-9. regole di conversione stati/eventi/errori in testi;
-10. richieste concettuali verso il livello sistema operativo;
-11. criteri minimi di testabilità del bridge;
-12. vincoli per la futura implementazione C#;
-13. collocazione nella cartella `view-models`;
-14. creazione di un progetto .NET separato per il bridge;
-15. dipendenza del bridge dal core;
-16. futura dipendenza della UI dal bridge.
+5. chiavi localization che il bridge deve usare;
+6. mappature core → localization key;
+7. struttura concettuale del modello mostrabile;
+8. struttura concettuale dell'aggiornamento prodotto dal bridge;
+9. formato del tempo rimanente;
+10. regole di conversione minuti/secondi in secondi totali;
+11. regole di conversione stati/eventi/errori in testi;
+12. richieste concettuali verso il futuro livello audio/sistema operativo;
+13. criteri minimi di testabilità del bridge;
+14. vincoli per la futura implementazione C#;
+15. collocazione nella cartella `view-models`;
+16. creazione di un progetto .NET separato per il bridge;
+17. dipendenza del bridge dal core;
+18. dipendenza del bridge da localization;
+19. futura dipendenza della UI dal bridge.
 
 Questo design non può definire:
 
@@ -161,16 +195,19 @@ Questo design non può definire:
 7. proprietà UI Automation concrete;
 8. annunci automatici NVDA;
 9. implementazione audio;
-10. timer reale di sistema;
-11. dispatcher timer;
-12. thread UI;
-13. notifiche Windows;
-14. persistenza;
-15. storico sessioni;
-16. funzioni economiche;
-17. massimo numero di sessioni;
-18. gestione avanzata audio;
-19. modifica del core già approvato.
+10. file audio;
+11. audio focus reale;
+12. sospensione, muting o attenuazione di altre app;
+13. timer reale di sistema;
+14. dispatcher timer;
+15. thread UI;
+16. notifiche Windows;
+17. persistenza;
+18. storico sessioni;
+19. funzioni economiche;
+20. massimo numero di sessioni;
+21. modifica del core già approvato;
+22. modifica del sistema localization già approvato.
 
 ---
 
@@ -192,9 +229,9 @@ stati neutri
 eventi neutri
 errori neutri
 dati dinamici neutri
-testi utente centralizzati
+chiavi tipizzate di CicloTimer.Localization
 formattazione mostrabile
-richieste concettuali verso il futuro livello sistema operativo
+richieste concettuali verso il futuro livello audio/sistema operativo
 ```
 
 Il bridge non deve conoscere:
@@ -206,6 +243,7 @@ NVDA come tecnologia diretta
 UI Automation concreta
 file audio
 API Windows
+audio focus
 regole interne non pubbliche del core
 database
 cloud
@@ -215,6 +253,10 @@ persistenza
 Il bridge deve restare piccolo.
 
 Il bridge non deve diventare un secondo core.
+
+Il bridge non deve diventare un servizio audio.
+
+Il bridge non deve diventare una UI.
 
 ---
 
@@ -281,7 +323,26 @@ TimerCommandResult rappresenta uno snapshot del comando corrente.
 La fonte primaria dello stato corrente resta TimerEngine.
 ```
 
-Il bridge deve quindi usare il risultato del comando per capire l'esito immediato dell'azione, ma deve considerare il core come fonte principale dello stato corrente.
+Regola di sincronizzazione:
+
+```text
+TimerCommandResult descrive cosa è successo nel comando appena eseguito.
+TimerEngine descrive qual è lo stato corrente del timer dopo il comando.
+```
+
+Quindi, dopo un comando:
+
+1. il bridge usa `TimerCommandResult` per eventi ed errori del comando corrente;
+2. il bridge legge il `TimerEngine` per costruire lo stato mostrabile corrente;
+3. il bridge non deve mantenere uno stato parallelo che sostituisce il core.
+
+Esempio:
+
+```text
+StartTimer restituisce TimerStarted.
+Il bridge usa TimerCommandResult.Events per EventMessageText.
+Poi legge TimerEngine.CurrentState e TimerEngine.RemainingSeconds per costruire TimerDisplayModel.
+```
 
 Il progetto bridge deve dipendere dal progetto core:
 
@@ -293,9 +354,103 @@ CicloTimer.Core
 
 Il progetto core non deve dipendere dal bridge.
 
+Il progetto core non deve dipendere da localization.
+
+Il progetto core non deve dipendere dall'audio.
+
 ---
 
-## 6. Responsabilità autorizzate del bridge
+## 6. Relazione con CicloTimer.Localization
+
+Il bridge deve dipendere dal progetto:
+
+```text
+CicloTimer.Localization
+```
+
+Il progetto bridge deve quindi avere queste dipendenze:
+
+```text
+CicloTimer.Bridge
+  dipende da CicloTimer.Core
+  dipende da CicloTimer.Localization
+```
+
+Il progetto `CicloTimer.Localization` non deve dipendere dal bridge.
+
+Il progetto `CicloTimer.Localization` non deve dipendere dal core.
+
+La responsabilità di mappare i tipi del core verso le chiavi localization appartiene al bridge.
+
+Esempio corretto:
+
+```text
+TimerState.Running
+↓
+Bridge
+↓
+TimerTextKey.StateRunning
+↓
+CicloTimer.Localization
+↓
+"Sessione in corso"
+```
+
+Esempio corretto:
+
+```text
+TimerError.InvalidSessionDuration
+↓
+Bridge
+↓
+ErrorTextKey.InvalidSessionDuration
+↓
+CicloTimer.Localization
+↓
+"La durata della sessione deve essere maggiore di zero."
+```
+
+Esempio corretto:
+
+```text
+TimerEvent.TimerStarted
+↓
+Bridge
+↓
+TimerTextKey.EventTimerStarted
+↓
+CicloTimer.Localization
+↓
+"Timer avviato."
+```
+
+Il bridge non deve usare stringhe libere come chiavi.
+
+Esempi vietati:
+
+```text
+GetText("Running")
+GetText("InvalidSessionDuration")
+GetText("TimerStarted")
+```
+
+Il bridge non deve usare `ToString()` sugli enum del core per generare chiavi.
+
+Esempi vietati:
+
+```text
+TimerState.Running.ToString()
+TimerError.InvalidSessionDuration.ToString()
+TimerEvent.TimerStarted.ToString()
+```
+
+Il bridge non deve usare reflection sugli enum del core per generare chiavi.
+
+La mappatura deve essere esplicita, deterministica e testabile.
+
+---
+
+## 7. Responsabilità autorizzate del bridge
 
 Il bridge può:
 
@@ -311,19 +466,20 @@ Il bridge può:
 10. inoltrare `Tick` al core quando riceve il comando da un orchestratore esterno;
 11. leggere lo stato aggiornato dal core;
 12. leggere il risultato dell'ultimo comando;
-13. trasformare `TimerState` in testo utente;
-14. trasformare `TimerError` in messaggio utente;
-15. trasformare `TimerEvent` in messaggio evento;
-16. formattare `RemainingSeconds` in `mm:ss`;
-17. formattare `CompletedSessions` in testo mostrabile;
-18. calcolare il testo dell'azione principale;
-19. copiare o esporre le disponibilità `CanStart`, `CanPause`, `CanResume`, `CanReset` nel modello mostrabile;
-20. preparare un testo accessibile coerente con il testo visivo;
-21. preparare richieste concettuali verso il futuro livello sistema operativo.
+13. trasformare `TimerState` in `TimerTextKey`;
+14. trasformare `TimerError` in `ErrorTextKey`;
+15. trasformare `TimerEvent` in `TimerTextKey`;
+16. richiedere testi a `CicloTimer.Localization`;
+17. formattare `RemainingSeconds` in `mm:ss`;
+18. formattare `CompletedSessions` in testo mostrabile usando template/testi centralizzati;
+19. calcolare il testo dell'azione principale usando `CommandTextKey`;
+20. copiare o esporre le disponibilità `CanStart`, `CanPause`, `CanResume`, `CanReset` nel modello mostrabile;
+21. preparare un testo accessibile coerente con il testo visivo;
+22. preparare richieste concettuali verso il futuro livello audio/sistema operativo.
 
-Il bridge può produrre un modello mostrabile completo dopo ogni comando ricevuto.
+Il bridge può produrre un aggiornamento mostrabile completo dopo ogni comando ricevuto.
 
-Il bridge può anche produrre un modello mostrabile a richiesta, senza eseguire un nuovo comando, leggendo lo stato corrente del core.
+Il bridge può anche produrre un aggiornamento mostrabile a richiesta, senza eseguire un nuovo comando, leggendo lo stato corrente del core.
 
 Il bridge non possiede una sorgente temporale propria.
 
@@ -337,7 +493,7 @@ La sorgente dei tick sarà definita in un futuro design UI/orchestrazione.
 
 ---
 
-## 7. Responsabilità vietate al bridge
+## 8. Responsabilità vietate al bridge
 
 Il bridge non deve:
 
@@ -357,21 +513,73 @@ Il bridge non deve:
 14. contenere timer reali;
 15. contenere dispatcher timer;
 16. contenere codice audio reale;
-17. chiamare API Windows;
-18. conoscere `AutomationProperties`;
-19. conoscere Live Region;
-20. contenere stringhe utente hardcoded sparse;
-21. contenere logica UI concreta;
-22. modificare controlli grafici;
-23. aprire finestre;
-24. accedere a database;
-25. gestire storico sessioni.
+17. riprodurre suoni;
+18. fermare, abbassare o ripristinare il volume di altre app;
+19. chiamare API Windows;
+20. conoscere `AutomationProperties`;
+21. conoscere Live Region;
+22. contenere stringhe utente hardcoded sparse;
+23. usare stringhe libere come chiavi localization;
+24. usare `ToString()` sugli enum del core per generare chiavi localization;
+25. usare reflection sugli enum del core per generare chiavi localization;
+26. contenere logica UI concreta;
+27. modificare controlli grafici;
+28. aprire finestre;
+29. accedere a database;
+30. gestire storico sessioni.
 
 Il bridge deve restare deterministico e testabile.
 
 ---
 
-## 8. Input provenienti dalla UI
+## 9. Interfaccia concettuale del bridge
+
+Questo design non impone ancora firme C# definitive, ma definisce i comandi concettuali che il bridge dovrà esporre o supportare nel coding plan.
+
+Metodi concettuali:
+
+```text
+Configure(sessionMinutes, sessionSeconds, finalAlertMinutes, finalAlertSeconds)
+Start()
+Pause()
+Resume()
+Reset()
+Tick(elapsedSeconds)
+GetCurrentUpdate()
+```
+
+Significato:
+
+```text
+Configure(...)
+Converte minuti/secondi in secondi totali e chiama ConfigureTimer del core.
+
+Start()
+Chiama StartTimer del core.
+
+Pause()
+Chiama PauseTimer del core.
+
+Resume()
+Chiama ResumeTimer del core.
+
+Reset()
+Chiama ResetTimer del core.
+
+Tick(elapsedSeconds)
+Inoltra il tick al core. Il bridge non genera il tick.
+
+GetCurrentUpdate()
+Produce un TimerBridgeUpdate leggendo lo stato corrente del core, senza eseguire nuovi comandi.
+```
+
+Ogni metodo che esegue un comando deve restituire concettualmente un `TimerBridgeUpdate`.
+
+Il coding plan potrà definire i nomi C# definitivi, ma non deve cambiare le responsabilità.
+
+---
+
+## 10. Input provenienti dalla UI
 
 La futura UI potrà passare al bridge valori legati alla configurazione del timer.
 
@@ -432,7 +640,7 @@ La validazione logica della configurazione appartiene al core.
 
 ---
 
-## 9. Validazione UI e validazione core
+## 11. Validazione UI e validazione core
 
 La UI può fare controlli minimi di formato.
 
@@ -448,7 +656,7 @@ Questi controlli riguardano la leggibilità dell'input, non la validità logica 
 
 Il bridge può ricevere dalla UI valori già convertiti in interi, oppure può aiutare a convertire valori grezzi se il futuro design UI lo richiederà.
 
-Il bridge può produrre errori di conversione o input non parsabile.
+Il bridge può produrre errori di conversione o input non parsabile solo se il coding plan li definisce esplicitamente.
 
 Questi errori non devono sostituire gli errori core.
 
@@ -479,7 +687,10 @@ Core:
 restituisce InvalidSessionDuration
 
 Bridge:
-prepara messaggio utente
+mappa TimerError.InvalidSessionDuration verso ErrorTextKey.InvalidSessionDuration
+
+Localization:
+restituisce il messaggio italiano
 ```
 
 Esempio scorretto:
@@ -494,7 +705,7 @@ La validazione logica deve restare nel core.
 
 ---
 
-## 10. Modello mostrabile del timer
+## 12. Modello mostrabile del timer
 
 Il bridge deve produrre un modello mostrabile.
 
@@ -564,6 +775,19 @@ AccessibleEventText
 Testo accessibile collegato a un evento importante, se presente.
 ```
 
+Se non ci sono errori nel comando corrente:
+
+```text
+ErrorMessageText = string.Empty
+```
+
+Se non ci sono eventi rilevanti nel comando corrente:
+
+```text
+EventMessageText = string.Empty
+AccessibleEventText = string.Empty
+```
+
 Il modello mostrabile contiene testi finali e quindi non appartiene al core.
 
 La UI riceve il modello mostrabile e lo espone.
@@ -572,40 +796,131 @@ La UI non deve calcolare o tradurre autonomamente i campi del modello.
 
 ---
 
-## 11. Testi utente centralizzati
+## 13. Aggiornamento prodotto dal bridge
 
-Il bridge deve usare il sistema centralizzato dei testi utente.
+Il bridge deve restituire sempre un aggiornamento concettuale unico.
 
-La soluzione concreta del sistema testi sarà definita nel coding plan o in un design dedicato se necessario.
-
-Per la prima versione è ammessa una soluzione semplice, per esempio una classe o modulo interno con costanti stringa.
-
-Il principio obbligatorio è:
+Nome concettuale:
 
 ```text
-una sola fonte controllata per i testi statici rivolti all'utente
+TimerBridgeUpdate
 ```
 
-Il bridge non deve contenere testi utente hardcoded sparsi.
-
-Sono testi statici da centralizzare:
+Contenuto concettuale obbligatorio:
 
 ```text
-Durata sessione
-Avviso finale
+TimerDisplayModel DisplayModel
+IReadOnlyList<SystemActionRequest> SystemActions
+```
+
+Regola obbligatoria:
+
+```text
+ogni comando del bridge restituisce TimerBridgeUpdate
+```
+
+Se non ci sono richieste verso il futuro livello audio/sistema operativo:
+
+```text
+SystemActions = lista vuota
+```
+
+Questo evita ambiguità tra comandi che producono solo modello e comandi che producono modello più azioni.
+
+Il coding plan definirà la forma C# concreta più semplice.
+
+Non sono ammissibili in questa fase:
+
+1. event bus;
+2. observer complessi;
+3. code persistenti;
+4. `Channel`;
+5. eventi C# come meccanismo principale;
+6. dipendenze MVVM/WPF;
+7. `INotifyPropertyChanged`;
+8. `ICommand`.
+
+La scelta di `TimerBridgeUpdate` mantiene il bridge deterministico e facilmente testabile.
+
+---
+
+## 14. Richieste concettuali audio/sistema
+
+Il bridge può produrre richieste concettuali verso un futuro livello audio/sistema operativo.
+
+Nome concettuale:
+
+```text
+SystemActionRequest
+```
+
+Valori concettuali minimi:
+
+```text
+StartFinalAlertSound
+StopFinalAlertSound
+```
+
+È ammessa una lista vuota quando non ci sono azioni da eseguire.
+
+Forma consigliata:
+
+```text
+IReadOnlyList<SystemActionRequest>
+```
+
+Il bridge non deve eseguire queste richieste.
+
+Il bridge non deve sapere come il futuro audio service le implementerà.
+
+Il futuro audio service potrà occuparsi di:
+
+```text
+riproduzione del suono
+loop del suono
+stop del suono
+audio focus
+attenuazione o sospensione audio di altre app
+ripristino audio di altre app
+gestione errori audio
+API Windows
+```
+
+Tutto questo è fuori dal bridge.
+
+Il bridge produce solo segnali concettuali.
+
+---
+
+## 15. Testi utente centralizzati
+
+Il bridge deve usare esclusivamente `CicloTimer.Localization` per i testi utente statici e i template testuali.
+
+Sono testi statici da ottenere tramite localization:
+
+```text
 Avvia
 Pausa
 Riprendi
 Reset
+Configura
 Timer fermo
 Sessione in corso
 Avviso finale in corso
 Timer in pausa
-Sessione completata
-Sessioni completate
-Tempo rimanente
-Valore non valido
-Configurazione non valida
+Timer configurato.
+Timer avviato.
+Timer ripreso.
+Timer resettato.
+Avviso finale iniziato.
+Sessione completata.
+Sessioni completate aggiornate.
+Nuova sessione avviata.
+Configurazione o comando non valido.
+La durata della sessione deve essere maggiore di zero.
+Tempo rimanente: {0}. {1}. {2}.
+Sessione completata. Sessioni completate: {0}.
+Errore: {0}
 ```
 
 Il bridge può combinare testi statici centralizzati con dati dinamici.
@@ -613,21 +928,23 @@ Il bridge può combinare testi statici centralizzati con dati dinamici.
 Esempio corretto:
 
 ```text
-Testo statico centralizzato:
-"Tempo rimanente"
+Localization:
+"Tempo rimanente: {0}. {1}. {2}."
 
-Dato dinamico:
+Dati dinamici:
 "04:59"
+"Sessione in corso"
+"Sessioni completate: 3"
 
 Bridge:
-"Tempo rimanente: 04:59"
+AccessibleStatusText = "Tempo rimanente: 04:59. Sessione in corso. Sessioni completate: 3."
 ```
 
 Esempio scorretto:
 
 ```text
-Core:
-"Tempo rimanente: 04:59"
+Bridge:
+return "Sessione in corso";
 ```
 
 Altro esempio scorretto:
@@ -637,11 +954,11 @@ UI:
 se CurrentState == Running allora mostra "Sessione in corso"
 ```
 
-La trasformazione appartiene al bridge.
+La trasformazione appartiene al bridge, ma i testi appartengono a localization.
 
 ---
 
-## 12. Formattazione del tempo
+## 16. Formattazione del tempo
 
 Il core espone il tempo in secondi interi.
 
@@ -685,67 +1002,63 @@ La decisione su quando aggiornare la UI appartiene al futuro design UI/orchestra
 
 ---
 
-## 13. Trasformazione degli stati
+## 17. Trasformazione degli stati
 
-Il bridge deve trasformare gli stati neutri in testi utente.
+Il bridge deve trasformare gli stati neutri in chiavi localization.
 
 Mappatura concettuale minima:
 
 ```text
-Stopped     → Timer fermo
-Running     → Sessione in corso
-FinalAlert  → Avviso finale in corso
-Paused      → Timer in pausa
+Stopped     → TimerTextKey.StateStopped
+Running     → TimerTextKey.StateRunning
+FinalAlert  → TimerTextKey.StateFinalAlert
+Paused      → TimerTextKey.StatePaused
 ```
 
-Il testo finale deve provenire dal sistema centralizzato dei testi utente.
+Il testo finale deve provenire da `CicloTimer.Localization`.
 
 La UI non deve contenere questa mappatura.
 
 Il core non deve contenere questa mappatura.
 
-Il bridge è responsabile della trasformazione.
+Il bridge è responsabile della trasformazione core enum → localization key.
 
 ---
 
-## 14. Trasformazione degli errori
+## 18. Trasformazione degli errori
 
-Il bridge deve trasformare gli errori neutri del core in messaggi utente.
+Il bridge deve trasformare gli errori neutri del core in chiavi localization.
 
 Mappatura concettuale minima:
 
 ```text
 InvalidSessionDuration
-→ La durata della sessione deve essere maggiore di zero.
+→ ErrorTextKey.InvalidSessionDuration
 
 InvalidFinalAlertDuration
-→ La durata dell'avviso finale non può essere negativa.
+→ ErrorTextKey.InvalidFinalAlertDuration
 
 FinalAlertNotLessThanSessionDuration
-→ La durata dell'avviso finale deve essere inferiore alla durata della sessione.
+→ ErrorTextKey.FinalAlertNotLessThanSessionDuration
 
 TimerNotConfigured
-→ Configura il timer prima di avviarlo.
+→ ErrorTextKey.TimerNotConfigured
 
 CannotStart
-→ Il timer non può essere avviato nello stato corrente.
+→ ErrorTextKey.CannotStart
 
 CannotPause
-→ Il timer non può essere messo in pausa nello stato corrente.
+→ ErrorTextKey.CannotPause
 
 CannotResume
-→ Il timer non può essere ripreso nello stato corrente.
+→ ErrorTextKey.CannotResume
 
 CannotReset
-→ Il timer non può essere resettato nello stato corrente.
+→ ErrorTextKey.CannotReset
 
 InvalidTickDuration
-→ Errore interno: durata tick non valida.
+→ ErrorTextKey.InvalidTickDuration
 ```
-
-Questi testi sono esempi di design.
-
-La formulazione finale può essere affinata nel coding plan, ma deve restare centralizzata.
 
 Il bridge deve poter ricevere più errori nello stesso risultato.
 
@@ -760,44 +1073,46 @@ Questa scelta è semplice, deterministica e testabile.
 
 Il bridge non deve mostrare eccezioni tecniche grezze.
 
+Il bridge non deve generare testi di errore propri.
+
 ---
 
-## 15. Trasformazione degli eventi
+## 19. Trasformazione degli eventi
 
-Il bridge deve trasformare gli eventi neutri del core in messaggi evento.
+Il bridge deve trasformare gli eventi neutri del core in chiavi localization.
 
 Mappatura concettuale minima:
 
 ```text
 TimerConfigured
-→ Timer configurato.
+→ TimerTextKey.EventTimerConfigured
 
 TimerStarted
-→ Timer avviato.
+→ TimerTextKey.EventTimerStarted
 
 TimerPaused
-→ Timer in pausa.
+→ TimerTextKey.EventTimerPaused
 
 TimerResumed
-→ Timer ripreso.
+→ TimerTextKey.EventTimerResumed
 
 TimerReset
-→ Timer resettato.
+→ TimerTextKey.EventTimerReset
 
 FinalAlertStarted
-→ Avviso finale iniziato.
+→ TimerTextKey.EventFinalAlertStarted
 
 SessionCompleted
-→ Sessione completata.
+→ TimerTextKey.EventSessionCompleted
 
 SessionCounterIncremented
-→ Sessioni completate aggiornate.
+→ TimerTextKey.EventSessionCounterIncremented
 
 NextSessionStarted
-→ Nuova sessione avviata.
+→ TimerTextKey.EventNextSessionStarted
 
 ValidationFailed
-→ Configurazione o comando non valido.
+→ TimerTextKey.EventValidationFailed
 ```
 
 Gli eventi arrivano dal canale definito dal core implementato nel Design 001.
@@ -830,27 +1145,42 @@ Ordine di gestione:
 3. NextSessionStarted
 ```
 
-Per il messaggio utente finale, il bridge può sintetizzare più eventi collegati nello stesso result in un solo messaggio.
+Per il messaggio utente finale, il bridge può sintetizzare più eventi collegati nello stesso result in un solo messaggio usando un template di localization.
 
-La sintesi di eventi multipli in un unico messaggio è ammessa solo quando gli eventi sono presenti insieme nello stesso `TimerCommandResult` del comando corrente.
+Template da usare:
+
+```text
+AccessibilityTextKey.SessionCompletedTemplate
+```
+
+oppure chiave equivalente già presente in `CicloTimer.Localization`.
 
 Esempio:
 
 ```text
-Sessione completata. Sessioni completate: 3.
+AccessibilityTextKey.SessionCompletedTemplate
++
+CompletedSessions = 3
+↓
+"Sessione completata. Sessioni completate: 3."
 ```
 
-Questo messaggio è prodotto dal bridge, non dal core.
+La sintesi di eventi multipli in un unico messaggio è ammessa solo quando gli eventi sono presenti insieme nello stesso `TimerCommandResult` del comando corrente.
 
 Se nel result del comando corrente è presente un solo evento, il bridge gestisce solo quell'evento.
 
 Se eventi collegati arrivano in result separati, il bridge non deve accumularli artificialmente e non deve mantenere una coda storica per ricostruire un messaggio combinato.
 
-In quel caso, il bridge gestisce solo l'evento o gli eventi presenti nel result corrente.
+Se non ci sono eventi nel result corrente:
+
+```text
+EventMessageText = string.Empty
+AccessibleEventText = string.Empty
+```
 
 ---
 
-## 16. Azione principale
+## 20. Azione principale
 
 La UI futura potrebbe avere un pulsante principale che cambia testo in base allo stato.
 
@@ -860,21 +1190,23 @@ Mappatura concettuale:
 
 ```text
 Stopped + CanStart = true
-→ Avvia
+→ CommandTextKey.Start
 
 Running + CanPause = true
-→ Pausa
+→ CommandTextKey.Pause
 
 FinalAlert + CanPause = true
-→ Pausa
+→ CommandTextKey.Pause
 
 Paused + CanResume = true
-→ Riprendi
+→ CommandTextKey.Resume
 ```
 
-Se nessuna azione principale è disponibile, il bridge può restituire un testo vuoto o una azione disabilitata.
+Il testo finale deve arrivare da `CicloTimer.Localization`.
 
-Questa scelta precisa può essere definita nel coding plan o nel design UI.
+Se nessuna azione principale è disponibile, il bridge può restituire testo vuoto.
+
+Questa scelta precisa può essere definita nel coding plan.
 
 Il bridge non deve decidere la disponibilità logica dei comandi.
 
@@ -891,7 +1223,7 @@ Il bridge può solo leggerla ed esporla nel modello mostrabile.
 
 ---
 
-## 17. Reset e contatore
+## 21. Reset e contatore
 
 Il bridge deve rispettare le regole del core e della visione.
 
@@ -917,7 +1249,7 @@ Se in futuro verrà introdotta una funzione di azzeramento globale del contatore
 
 ---
 
-## 18. Avviso finale e richieste verso il sistema operativo
+## 22. Avviso finale e richieste audio concettuali
 
 Il bridge può interpretare eventi neutri legati all'avviso finale.
 
@@ -930,15 +1262,21 @@ FinalAlertStarted
 può preparare:
 
 ```text
-TimerStateText = "Avviso finale in corso"
-EventMessageText = "Avviso finale iniziato."
+TimerStateText = testo da TimerTextKey.StateFinalAlert
+EventMessageText = testo da TimerTextKey.EventFinalAlertStarted
+SystemActionRequest.StartFinalAlertSound
 ```
 
-e può produrre una richiesta concettuale verso il futuro livello sistema operativo:
+Il bridge può produrre `StopFinalAlertSound` solo quando ha evidenza che l'avviso finale fosse attivo o che il comando corrente stia terminando una fase di avviso finale.
 
-```text
-StartFinalAlertSound
-```
+L'evidenza può arrivare da:
+
+1. `TimerEngine.IsFinalAlertActive` prima del comando;
+2. `TimerEngine.IsFinalAlertActive` dopo il comando;
+3. stato precedente `FinalAlert`;
+4. stato corrente `FinalAlert`;
+5. eventi di completamento sessione nel result corrente;
+6. comando corrente di pausa o reset eseguito mentre l'avviso finale era attivo.
 
 Quando riceve eventi di fine sessione, come:
 
@@ -951,10 +1289,10 @@ NextSessionStarted
 può produrre una richiesta concettuale:
 
 ```text
-StopFinalAlertSound
+SystemActionRequest.StopFinalAlertSound
 ```
 
-se l'avviso finale era attivo.
+se l'avviso finale era attivo o se il result corrente indica conclusione della sessione partita da avviso finale.
 
 Quando riceve:
 
@@ -965,7 +1303,19 @@ TimerPaused
 e lo stato precedente o corrente indica che l'avviso finale era attivo, può produrre una richiesta concettuale:
 
 ```text
-StopFinalAlertSound
+SystemActionRequest.StopFinalAlertSound
+```
+
+Quando riceve:
+
+```text
+TimerReset
+```
+
+e lo stato precedente o corrente indica che l'avviso finale era attivo, può produrre una richiesta concettuale:
+
+```text
+SystemActionRequest.StopFinalAlertSound
 ```
 
 Quando riceve nello stesso result:
@@ -978,7 +1328,7 @@ FinalAlertStarted
 può produrre una richiesta concettuale:
 
 ```text
-StartFinalAlertSound
+SystemActionRequest.StartFinalAlertSound
 ```
 
 Questo design non implementa audio.
@@ -987,13 +1337,17 @@ Questo design non sceglie librerie audio.
 
 Questo design non chiama API Windows.
 
-Questo design definisce solo le richieste concettuali che il bridge potrà inviare a un livello sistema operativo futuro.
+Questo design non ferma davvero musica o video di altre app.
+
+Questo design non gestisce volumi di sistema.
+
+Questo design definisce solo le richieste concettuali che il bridge potrà restituire a un orchestratore o audio service futuro.
 
 ---
 
-## 19. Richieste concettuali verso il livello sistema operativo
+## 23. Richieste concettuali verso il livello audio/sistema operativo
 
-Il bridge può produrre richieste neutre verso il futuro livello sistema operativo.
+Il bridge può produrre richieste neutre verso il futuro livello audio/sistema operativo.
 
 Nome concettuale:
 
@@ -1004,25 +1358,23 @@ SystemActionRequest
 Valori concettuali minimi:
 
 ```text
-None
 StartFinalAlertSound
 StopFinalAlertSound
 ```
 
-Questi nomi definiscono il contratto concettuale, non obbligano ancora a creare un tipo C# dedicato.
+Questi nomi definiscono il contratto concettuale, non obbligano ancora a una forma C# definitiva.
 
 Il coding plan potrà decidere la forma concreta più semplice, per esempio:
 
 1. enum;
 2. lista di enum;
-3. struttura semplice;
-4. valori costanti interni.
+3. proprietà su `TimerBridgeUpdate`.
 
 Il design definitivo del livello audio/sistema operativo sarà affrontato in un design successivo.
 
 Il bridge non deve eseguire direttamente queste richieste.
 
-Il bridge può solo restituirle o passarle al livello appropriato quando questo sarà progettato.
+Il bridge può solo restituirle o esporle dentro `TimerBridgeUpdate.SystemActions`.
 
 Regola obbligatoria:
 
@@ -1030,11 +1382,22 @@ Regola obbligatoria:
 il bridge non deve chiamare direttamente API Windows
 ```
 
+Il futuro audio service dovrà decidere:
+
+1. file audio;
+2. loop;
+3. volume;
+4. priorità audio;
+5. attenuazione/interruzione di altre app;
+6. ripristino di altre app;
+7. gestione degli errori audio;
+8. limiti tecnici di Windows.
+
 ---
 
-## 20. Testi accessibili
+## 24. Testi accessibili
 
-Il bridge deve preparare testi accessibili coerenti con i testi visivi.
+Il bridge deve preparare testi accessibili coerenti con i testi visivi usando `CicloTimer.Localization`.
 
 Per la prima versione il bridge deve produrre sempre i testi accessibili previsti dal modello, anche quando coincidono con i testi visivi.
 
@@ -1044,7 +1407,7 @@ Esempio:
 
 ```text
 TimerStateText = "Sessione in corso"
-AccessibleStatusText = "Sessione in corso"
+AccessibleStatusText = "Tempo rimanente: 04:59. Sessione in corso. Sessioni completate: 3."
 ```
 
 Esempio:
@@ -1052,6 +1415,12 @@ Esempio:
 ```text
 EventMessageText = "Sessione completata. Sessioni completate: 3."
 AccessibleEventText = "Sessione completata. Sessioni completate: 3."
+```
+
+Se non ci sono eventi rilevanti nel result corrente:
+
+```text
+AccessibleEventText = string.Empty
 ```
 
 Il bridge non deve usare API NVDA.
@@ -1066,7 +1435,7 @@ La futura UI deciderà come esporli tramite strumenti accessibili della piattafo
 
 Il tempo rimanente deve essere consultabile, ma non annunciato automaticamente ogni secondo.
 
-Quindi il bridge può produrre:
+Il bridge può produrre:
 
 ```text
 RemainingTimeText = "04:59"
@@ -1075,7 +1444,7 @@ RemainingTimeText = "04:59"
 e:
 
 ```text
-AccessibleStatusText = "Tempo rimanente: 04:59. Sessione in corso."
+AccessibleStatusText = "Tempo rimanente: 04:59. Sessione in corso. Sessioni completate: 3."
 ```
 
 ma non deve generare un evento accessibile automatico per ogni tick.
@@ -1084,45 +1453,41 @@ La decisione tecnica su Live Region o altri meccanismi sarà nel design UI/acces
 
 ---
 
-## 21. Output del bridge
+## 25. Output del bridge
 
-Il bridge deve produrre o esporre almeno:
+Il bridge deve produrre sempre:
 
 ```text
-TimerDisplayModel aggiornato
-+
-eventuali richieste concettuali verso il livello sistema operativo
+TimerBridgeUpdate
 ```
 
-Non viene imposto in questo design un wrapper complesso come `TimerBridgeResult`.
+`TimerBridgeUpdate` contiene:
 
-La scelta concreta sarà definita nel coding plan.
+```text
+TimerDisplayModel DisplayModel
+IReadOnlyList<SystemActionRequest> SystemActions
+```
+
+Regole:
+
+1. `DisplayModel` deve essere sempre presente;
+2. `SystemActions` deve essere sempre presente;
+3. se non ci sono azioni concettuali, `SystemActions` deve essere lista vuota;
+4. non usare `null` per rappresentare assenza di azioni;
+5. non usare eventi C# come meccanismo principale;
+6. non usare code persistenti;
+7. non usare `Channel`;
+8. non usare event bus.
 
 Regola obbligatoria:
 
 ```text
-dopo ogni comando la UI deve poter ricevere o leggere uno stato mostrabile coerente
+dopo ogni comando la UI o l'orchestratore futuro deve poter ricevere un TimerBridgeUpdate coerente
 ```
-
-Sono opzioni ammissibili per la futura implementazione:
-
-1. restituire direttamente `TimerDisplayModel`;
-2. restituire `TimerDisplayModel` più una lista di richieste concettuali;
-3. mantenere un `TimerDisplayModel` aggiornato nel bridge;
-4. usare una piccola struttura di aggiornamento solo se il coding plan dimostra che semplifica il codice.
-
-Non sono ammissibili:
-
-1. un wrapper complesso non necessario;
-2. un event bus;
-3. observer complessi;
-4. dipendenze MVVM/WPF;
-5. `INotifyPropertyChanged` in questo livello, salvo design UI successivo;
-6. `ICommand` in questo livello, salvo design UI successivo.
 
 ---
 
-## 22. Sequenza: configurazione valida
+## 26. Sequenza: configurazione valida
 
 Sequenza concettuale:
 
@@ -1143,9 +1508,11 @@ Bridge chiama ConfigureTimer
 ↓
 Core accetta configurazione
 ↓
-Bridge legge stato aggiornato
+Bridge usa TimerCommandResult per eventi/errori
 ↓
-Bridge produce TimerDisplayModel
+Bridge legge TimerEngine per stato corrente
+↓
+Bridge produce TimerBridgeUpdate
 ↓
 UI può mostrare:
 Tempo rimanente: 05:00
@@ -1159,7 +1526,7 @@ Lo decide il core.
 
 ---
 
-## 23. Sequenza: configurazione non valida
+## 27. Sequenza: configurazione non valida
 
 Sequenza concettuale:
 
@@ -1182,9 +1549,15 @@ Core rifiuta configurazione
 ↓
 Core restituisce InvalidSessionDuration
 ↓
-Bridge trasforma il primo errore in messaggio utente
+Bridge legge TimerCommandResult.Errors
 ↓
-Bridge produce TimerDisplayModel con ErrorMessageText
+Bridge mappa il primo errore verso ErrorTextKey.InvalidSessionDuration
+↓
+Localization restituisce il messaggio utente
+↓
+Bridge legge TimerEngine per stato corrente
+↓
+Bridge produce TimerBridgeUpdate con ErrorMessageText
 ↓
 UI mostra errore già pronto
 ```
@@ -1199,7 +1572,7 @@ Il messaggio non deve essere generato dal core.
 
 ---
 
-## 24. Sequenza: avvio timer
+## 28. Sequenza: avvio timer
 
 Sequenza concettuale:
 
@@ -1212,13 +1585,17 @@ Core passa a Running
 ↓
 Core restituisce TimerStarted
 ↓
-Bridge legge stato aggiornato
+Bridge usa TimerCommandResult.Events per EventMessageText
 ↓
-Bridge trasforma Running in "Sessione in corso"
+Bridge legge TimerEngine.CurrentState e RemainingSeconds
 ↓
-Bridge trasforma TimerStarted in "Timer avviato."
+Bridge mappa Running verso TimerTextKey.StateRunning
 ↓
-Bridge produce TimerDisplayModel aggiornato
+Bridge mappa TimerStarted verso TimerTextKey.EventTimerStarted
+↓
+Localization restituisce i testi
+↓
+Bridge produce TimerBridgeUpdate
 ↓
 UI mostra stato e messaggio evento
 ```
@@ -1233,7 +1610,7 @@ Punti vietati:
 
 ---
 
-## 25. Sequenza: tick
+## 29. Sequenza: tick
 
 Sequenza concettuale:
 
@@ -1246,13 +1623,17 @@ bridge inoltra Tick al core
 ↓
 core aggiorna RemainingSeconds
 ↓
-bridge legge RemainingSeconds
+bridge usa TimerCommandResult per eventi/errori del tick
+↓
+bridge legge TimerEngine per stato corrente
 ↓
 bridge formatta RemainingTimeText
 ↓
-bridge produce TimerDisplayModel aggiornato
+bridge produce TimerBridgeUpdate
 ↓
 UI può aggiornare il testo mostrato
+↓
+orchestratore futuro può leggere eventuali SystemActions
 ```
 
 Il tick non è un comando utente.
@@ -1271,7 +1652,7 @@ Il bridge non deve creare `DispatcherTimer`, `System.Timers.Timer`, thread o loo
 
 ---
 
-## 26. Sequenza: ingresso in avviso finale
+## 30. Sequenza: ingresso in avviso finale
 
 Sequenza concettuale:
 
@@ -1282,13 +1663,15 @@ core rileva ingresso in FinalAlert
 ↓
 core espone FinalAlertStarted
 ↓
-bridge riceve FinalAlertStarted
+bridge riceve FinalAlertStarted nel TimerCommandResult
 ↓
-bridge prepara "Avviso finale in corso"
+bridge legge TimerEngine per stato corrente
 ↓
-bridge prepara richiesta StartFinalAlertSound
+bridge prepara testi tramite localization
 ↓
-bridge produce TimerDisplayModel aggiornato
+bridge prepara richiesta SystemActionRequest.StartFinalAlertSound
+↓
+bridge produce TimerBridgeUpdate con DisplayModel + SystemActions
 ```
 
 Il bridge non calcola la soglia di avviso.
@@ -1299,7 +1682,7 @@ Il bridge non riproduce direttamente il suono.
 
 ---
 
-## 27. Sequenza: pausa durante avviso finale
+## 31. Sequenza: pausa durante avviso finale
 
 Sequenza concettuale:
 
@@ -1308,17 +1691,23 @@ timer è in FinalAlert
 ↓
 UI invia Pausa
 ↓
+bridge rileva che IsFinalAlertActive era true prima del comando
+↓
 bridge chiama PauseTimer
 ↓
 core passa a Paused
 ↓
 core espone TimerPaused
 ↓
-bridge prepara "Timer in pausa"
+bridge usa TimerCommandResult per evento TimerPaused
 ↓
-bridge può produrre richiesta StopFinalAlertSound
+bridge legge TimerEngine per stato corrente
 ↓
-bridge produce TimerDisplayModel aggiornato
+bridge prepara testi tramite localization
+↓
+bridge produce richiesta SystemActionRequest.StopFinalAlertSound
+↓
+bridge produce TimerBridgeUpdate con DisplayModel + SystemActions
 ```
 
 Il bridge non deve perdere il tempo rimanente.
@@ -1329,7 +1718,7 @@ Il tempo rimanente resta nel core.
 
 ---
 
-## 28. Sequenza: ripresa dentro avviso finale
+## 32. Sequenza: ripresa dentro avviso finale
 
 Sequenza concettuale:
 
@@ -1345,11 +1734,15 @@ core passa a FinalAlert
 ↓
 core espone TimerResumed e FinalAlertStarted
 ↓
-bridge prepara "Avviso finale in corso"
+bridge usa TimerCommandResult per eventi
 ↓
-bridge può produrre richiesta StartFinalAlertSound
+bridge legge TimerEngine per stato corrente
 ↓
-bridge produce TimerDisplayModel aggiornato
+bridge prepara testi tramite localization
+↓
+bridge produce richiesta SystemActionRequest.StartFinalAlertSound
+↓
+bridge produce TimerBridgeUpdate con DisplayModel + SystemActions
 ```
 
 Il bridge non deve inventare `FinalAlertStarted`.
@@ -1358,7 +1751,7 @@ Il bridge deve reagire all'evento o alla transizione esposta dal core.
 
 ---
 
-## 29. Sequenza: fine sessione e ripartenza automatica
+## 33. Sequenza: fine sessione e ripartenza automatica
 
 Sequenza concettuale:
 
@@ -1377,14 +1770,14 @@ core espone NextSessionStarted
 ↓
 bridge riceve gli eventi ordinati nello stesso result del comando corrente
 ↓
-bridge prepara messaggio:
+bridge prepara messaggio tramite template localization:
 "Sessione completata. Sessioni completate: 3."
 ↓
-bridge produce eventuale richiesta StopFinalAlertSound
+bridge produce eventuale richiesta SystemActionRequest.StopFinalAlertSound
 ↓
-bridge legge stato aggiornato
+bridge legge stato aggiornato dal TimerEngine
 ↓
-bridge produce TimerDisplayModel aggiornato
+bridge produce TimerBridgeUpdate con DisplayModel + SystemActions
 ```
 
 Il bridge non deve chiamare `StartTimer`.
@@ -1397,12 +1790,14 @@ La sintesi del messaggio "Sessione completata. Sessioni completate: 3." è valid
 
 ---
 
-## 30. Sequenza: reset
+## 34. Sequenza: reset
 
 Sequenza concettuale:
 
 ```text
 UI invia Reset
+↓
+bridge rileva se IsFinalAlertActive era true prima del comando
 ↓
 bridge chiama ResetTimer
 ↓
@@ -1414,9 +1809,15 @@ core mantiene CompletedSessions invariato
 ↓
 core espone TimerReset
 ↓
-bridge prepara "Timer resettato."
+bridge usa TimerCommandResult per evento TimerReset
 ↓
-bridge produce TimerDisplayModel aggiornato
+bridge legge TimerEngine per stato corrente
+↓
+bridge prepara "Timer resettato." tramite localization
+↓
+se l'avviso finale era attivo prima del reset, produce StopFinalAlertSound
+↓
+bridge produce TimerBridgeUpdate
 ```
 
 Il bridge non deve azzerare il contatore.
@@ -1427,7 +1828,27 @@ Il bridge non deve generare eventi di ciclo.
 
 ---
 
-## 31. Testabilità del bridge
+## 35. Sequenza: stato corrente senza comando
+
+Sequenza concettuale:
+
+```text
+UI futura o orchestratore futuro richiede stato corrente
+↓
+Bridge non chiama nuovi comandi core
+↓
+Bridge legge TimerEngine
+↓
+Bridge produce TimerDisplayModel
+↓
+Bridge restituisce TimerBridgeUpdate con SystemActions vuota
+```
+
+Questa sequenza è utile per inizializzare la UI futura o aggiornare la visualizzazione senza eseguire azioni.
+
+---
+
+## 36. Testabilità del bridge
 
 Il bridge deve essere testabile senza:
 
@@ -1476,18 +1897,38 @@ CanResume = true
 PrimaryActionText = "Riprendi"
 ```
 
+```text
+Events = [FinalAlertStarted]
+↓
+SystemActions contiene StartFinalAlertSound
+```
+
+```text
+Events = [SessionCompleted, SessionCounterIncremented, NextSessionStarted]
+↓
+SystemActions contiene StopFinalAlertSound
+```
+
+```text
+Events = []
+↓
+EventMessageText = string.Empty
+AccessibleEventText = string.Empty
+SystemActions = lista vuota
+```
+
 I test devono essere deterministici.
 
 ---
 
-## 32. Dipendenze del bridge
+## 37. Dipendenze del bridge
 
 Il bridge può dipendere da:
 
-1. progetto core;
-2. sistema centralizzato dei testi utente;
-3. eventuali valori concettuali di richiesta verso sistema operativo;
-4. tipi del modello mostrabile.
+1. `CicloTimer.Core`;
+2. `CicloTimer.Localization`;
+3. eventuali tipi interni del modello mostrabile;
+4. eventuali enum interni di richieste concettuali audio/sistema.
 
 Il bridge non deve dipendere da:
 
@@ -1504,7 +1945,7 @@ Il bridge non deve dipendere da:
 11. cloud;
 12. file di configurazione esterni non approvati.
 
-Il bridge deve essere un progetto .NET separato e deve usare un target non Windows-specifico, coerente con il core.
+Il bridge deve essere un progetto .NET separato e deve usare un target non Windows-specifico, coerente con il core e localization.
 
 Target previsto:
 
@@ -1520,7 +1961,7 @@ net9.0-windows
 
 ---
 
-## 33. Collocazione fisica obbligatoria
+## 38. Collocazione fisica obbligatoria
 
 La struttura fisica del progetto è fissata dal project owner e non deve essere reinterpretata dagli agenti.
 
@@ -1528,6 +1969,12 @@ La logica core già implementata si trova in:
 
 ```text
 models/CicloTimer.Core/
+```
+
+Il sistema localization già implementato si trova in:
+
+```text
+locales/CicloTimer.Localization/
 ```
 
 Il bridge / modello mostrabile deve invece essere collocato in:
@@ -1549,6 +1996,10 @@ models/
   CicloTimer.Core/
     CicloTimer.Core.csproj
 
+locales/
+  CicloTimer.Localization/
+    CicloTimer.Localization.csproj
+
 view-models/
   CicloTimer.Bridge/
     CicloTimer.Bridge.csproj
@@ -1559,14 +2010,23 @@ Regola vincolante:
 ```text
 non creare src/
 non creare models/CicloTimer.Bridge/
+non creare locales/CicloTimer.Bridge/
 non creare view-models/TimerBridge/ come semplice cartella di codice non progettuale
 non collocare il bridge nella UI WPF
 non collocare il bridge nel progetto core
+non collocare il bridge nel progetto localization
 ```
 
-Il progetto `CicloTimer.Bridge` deve referenziare `CicloTimer.Core`.
+Il progetto `CicloTimer.Bridge` deve referenziare:
+
+```text
+models/CicloTimer.Core/CicloTimer.Core.csproj
+locales/CicloTimer.Localization/CicloTimer.Localization.csproj
+```
 
 Il progetto `CicloTimer.Core` non deve referenziare il bridge.
+
+Il progetto `CicloTimer.Localization` non deve referenziare il bridge.
 
 Il progetto WPF non deve ancora essere modificato in questo design.
 
@@ -1582,36 +2042,49 @@ e dovranno referenziare il progetto bridge, non il progetto WPF.
 
 ---
 
-## 34. Relazione con i futuri design
+## 39. Relazione con i futuri design
 
 Questo design prepara ma non implementa:
 
 1. UI WPF minima;
 2. accessibilità operativa;
 3. audio dell'avviso finale;
-4. sorgente temporale reale;
-5. collegamento effettivo con `MainWindow`.
+4. audio focus;
+5. interruzione, attenuazione o ripristino audio di altre applicazioni;
+6. sorgente temporale reale;
+7. orchestratore;
+8. collegamento effettivo con `MainWindow`.
 
-Sequenza logica futura:
+Sequenza logica futura aggiornata:
 
 ```text
 Design 001 — Core timer engine
 ↓
+Design 003 — Sistema centralizzato testi e messaggi applicativi
+↓
 Design 002 — Bridge UI-logica e modello mostrabile
 ↓
-Design 003 — UI WPF minima accessibile
+Design 004 — Audio service / audio focus / avviso finale
 ↓
-Design 004 — Audio avviso finale
+Design 005 — UI WPF minima accessibile
 ↓
-Design 005 — Integrazione timer reale / orchestrazione UI
+Design 006 — Integrazione timer reale / orchestrazione
 ```
 
-La numerazione futura potrà cambiare, ma il principio resta:
+La numerazione reale resta quella dei file già creati, ma la sequenza logica di implementazione è:
 
 ```text
-prima tradurre il core in dati mostrabili
-poi collegare la UI
-poi collegare audio e integrazioni Windows
+core
+↓
+localization
+↓
+bridge
+↓
+audio service
+↓
+UI
+↓
+orchestrazione finale
 ```
 
 La catena di dipendenze prevista a regime è:
@@ -1622,6 +2095,19 @@ ciclotimer WPF
 CicloTimer.Bridge
 ↓
 CicloTimer.Core
+CicloTimer.Localization
+```
+
+Il futuro audio service non deve essere dipendenza diretta obbligatoria del bridge.
+
+La relazione corretta sarà:
+
+```text
+Bridge produce SystemActionRequest
+↓
+Orchestratore futuro legge SystemActionRequest
+↓
+Audio service futuro esegue l'azione
 ```
 
 La catena di test prevista è:
@@ -1633,16 +2119,24 @@ CicloTimer.Core
 ```
 
 ```text
+CicloTimer.Localization.Tests
+↓
+CicloTimer.Localization
+```
+
+```text
 CicloTimer.Bridge.Tests
 ↓
 CicloTimer.Bridge
 ↓
 CicloTimer.Core
+↓
+CicloTimer.Localization
 ```
 
 ---
 
-## 35. Criteri di validità
+## 40. Criteri di validità
 
 Il design sarà rispettato se una futura implementazione:
 
@@ -1650,86 +2144,114 @@ Il design sarà rispettato se una futura implementazione:
 2. crea `view-models/CicloTimer.Bridge/CicloTimer.Bridge.csproj`;
 3. non crea `src`;
 4. non crea `models/CicloTimer.Bridge`;
-5. non crea `view-models/TimerBridge/` come semplice cartella di codice non progettuale;
-6. mantiene il core indipendente dal bridge;
-7. fa dipendere il bridge dal core;
-8. non fa dipendere il core dal bridge;
-9. non modifica il comportamento del core;
-10. converte minuti e secondi UI in secondi totali;
-11. invia configurazioni neutre al core;
-12. formatta `RemainingSeconds` fuori dal core;
-13. produce `RemainingTimeText`;
-14. produce `TimerStateText`;
-15. produce `CompletedSessionsText`;
-16. produce messaggi errore da errori neutri;
-17. produce messaggi evento da eventi neutri;
-18. usa testi statici centralizzati;
-19. non inserisce stringhe utente hardcoded sparse;
-20. non duplica la validazione logica;
-21. non incrementa il contatore fuori dal core;
-22. non simula la ripartenza automatica;
-23. non possiede una sorgente temporale;
-24. non genera tick;
-25. non chiama direttamente API Windows;
-26. non riproduce audio reale;
-27. non usa WPF;
-28. non usa XAML;
-29. non usa NVDA;
-30. non usa UI Automation;
-31. è testabile senza UI;
-32. produce un modello mostrabile coerente dopo ogni comando;
-33. mantiene eventi non cumulativi e ordinati;
-34. sintetizza eventi multipli solo se presenti nello stesso `TimerCommandResult`;
-35. non gestisce lo stesso evento tramite più canali;
-36. usa il primo errore della lista in caso di errori multipli;
-37. produce sempre `AccessibleStatusText`;
-38. produce sempre `AccessibleEventText`, anche se vuoto o uguale al testo evento visivo;
-39. crea test bridge in `tests/CicloTimer.Bridge.Tests/`;
-40. i test del bridge referenziano il progetto bridge e non il progetto WPF.
+5. non crea `locales/CicloTimer.Bridge`;
+6. non crea `view-models/TimerBridge/` come semplice cartella di codice non progettuale;
+7. mantiene il core indipendente dal bridge;
+8. mantiene localization indipendente dal bridge;
+9. fa dipendere il bridge dal core;
+10. fa dipendere il bridge da localization;
+11. non modifica il comportamento del core;
+12. non modifica il comportamento di localization;
+13. converte minuti e secondi UI in secondi totali;
+14. invia configurazioni neutre al core;
+15. usa `TimerCommandResult` per eventi/errori del comando corrente;
+16. usa `TimerEngine` come fonte primaria dello stato corrente;
+17. formatta `RemainingSeconds` fuori dal core;
+18. produce `RemainingTimeText`;
+19. produce `TimerStateText`;
+20. produce `CompletedSessionsText`;
+21. produce sempre `TimerBridgeUpdate`;
+22. produce sempre `TimerDisplayModel`;
+23. produce sempre `SystemActions`, anche come lista vuota;
+24. produce messaggi errore da errori neutri usando localization;
+25. produce messaggi evento da eventi neutri usando localization;
+26. usa testi statici centralizzati da `CicloTimer.Localization`;
+27. non inserisce stringhe utente hardcoded sparse;
+28. non usa stringhe libere come chiavi localization;
+29. non usa `ToString()` sugli enum core per generare chiavi;
+30. non usa reflection sugli enum core per generare chiavi;
+31. non duplica la validazione logica;
+32. non incrementa il contatore fuori dal core;
+33. non simula la ripartenza automatica;
+34. non possiede una sorgente temporale;
+35. non genera tick;
+36. non chiama direttamente API Windows;
+37. non riproduce audio reale;
+38. non gestisce audio focus reale;
+39. non ferma o attenua audio di altre app;
+40. non usa WPF;
+41. non usa XAML;
+42. non usa NVDA;
+43. non usa UI Automation;
+44. è testabile senza UI;
+45. produce un aggiornamento mostrabile coerente dopo ogni comando;
+46. produce richieste concettuali audio/sistema quando necessario;
+47. produce `StartFinalAlertSound` su `FinalAlertStarted`;
+48. produce `StopFinalAlertSound` solo con evidenza di avviso finale attivo o sessione in chiusura;
+49. mantiene eventi non cumulativi e ordinati;
+50. sintetizza eventi multipli solo se presenti nello stesso `TimerCommandResult`;
+51. usa `AccessibilityTextKey.SessionCompletedTemplate` o chiave equivalente per la sintesi sessione completata;
+52. non gestisce lo stesso evento tramite più canali;
+53. usa il primo errore della lista in caso di errori multipli;
+54. produce sempre `AccessibleStatusText`;
+55. produce `AccessibleEventText` vuoto se non ci sono eventi;
+56. crea test bridge in `tests/CicloTimer.Bridge.Tests/`;
+57. i test del bridge referenziano il progetto bridge e non il progetto WPF;
+58. i test del bridge verificano assenza di dipendenze WPF/audio/API Windows.
 
 ---
 
-## 36. Criteri di non validità
+## 41. Criteri di non validità
 
 L'implementazione non è valida se:
 
 1. il bridge viene creato in `src`;
 2. il bridge viene creato in `models/CicloTimer.Bridge`;
-3. il bridge viene creato come semplice cartella `view-models/TimerBridge/` priva di progetto `.csproj`;
-4. il bridge viene creato dentro il progetto WPF;
-5. il bridge viene creato dentro il progetto core;
-6. il bridge contiene logica del timer;
-7. il bridge decide quando una sessione è completata;
-8. il bridge decrementa il tempo rimanente autonomamente;
-9. il bridge incrementa `CompletedSessions`;
-10. il bridge chiama `StartTimer` per simulare la ripartenza automatica;
-11. il bridge valida logicamente la configurazione al posto del core;
-12. il bridge contiene testi utente sparsi non centralizzati;
-13. il bridge chiama direttamente WPF;
-14. il bridge modifica controlli UI;
-15. il bridge usa `MainWindow`;
-16. il bridge usa XAML;
-17. il bridge usa NVDA;
-18. il bridge imposta `AutomationProperties`;
-19. il bridge crea Live Region;
-20. il bridge riproduce audio;
-21. il bridge chiama API Windows;
-22. il bridge usa timer reali;
-23. il bridge genera tick;
-24. il bridge crea `DispatcherTimer`;
-25. il bridge crea `System.Timers.Timer`;
-26. il bridge accumula eventi come storico permanente;
-27. il bridge duplica eventi già gestiti;
-28. il bridge sintetizza eventi multipli provenienti da result separati;
-29. la UI futura deve tradurre codici tecnici in testi;
-30. il core viene modificato per esigenze del bridge senza nuovo design;
-31. il progetto bridge usa `net9.0-windows`;
-32. i test del bridge referenziano il progetto WPF invece del progetto bridge;
-33. vengono introdotte funzionalità fuori perimetro.
+3. il bridge viene creato in `locales/CicloTimer.Bridge`;
+4. il bridge viene creato come semplice cartella `view-models/TimerBridge/` priva di progetto `.csproj`;
+5. il bridge viene creato dentro il progetto WPF;
+6. il bridge viene creato dentro il progetto core;
+7. il bridge viene creato dentro il progetto localization;
+8. il bridge contiene logica del timer;
+9. il bridge decide quando una sessione è completata;
+10. il bridge decrementa il tempo rimanente autonomamente;
+11. il bridge incrementa `CompletedSessions`;
+12. il bridge chiama `StartTimer` per simulare la ripartenza automatica;
+13. il bridge valida logicamente la configurazione al posto del core;
+14. il bridge contiene testi utente sparsi non centralizzati;
+15. il bridge usa stringhe libere come chiavi localization;
+16. il bridge usa `ToString()` sugli enum core per generare chiavi localization;
+17. il bridge usa reflection sugli enum core per generare chiavi localization;
+18. il bridge chiama direttamente WPF;
+19. il bridge modifica controlli UI;
+20. il bridge usa `MainWindow`;
+21. il bridge usa XAML;
+22. il bridge usa NVDA;
+23. il bridge imposta `AutomationProperties`;
+24. il bridge crea Live Region;
+25. il bridge riproduce audio;
+26. il bridge gestisce audio focus;
+27. il bridge ferma o attenua audio di altre app;
+28. il bridge chiama API Windows;
+29. il bridge usa timer reali;
+30. il bridge genera tick;
+31. il bridge crea `DispatcherTimer`;
+32. il bridge crea `System.Timers.Timer`;
+33. il bridge accumula eventi come storico permanente;
+34. il bridge duplica eventi già gestiti;
+35. il bridge sintetizza eventi multipli provenienti da result separati;
+36. il bridge usa event bus, code persistenti o `Channel` per le azioni audio;
+37. il bridge restituisce `null` per `SystemActions`;
+38. la UI futura deve tradurre codici tecnici in testi;
+39. il core viene modificato per esigenze del bridge senza nuovo design;
+40. localization viene modificato per esigenze del bridge senza nuovo design;
+41. il progetto bridge usa `net9.0-windows`;
+42. i test del bridge referenziano il progetto WPF invece del progetto bridge;
+43. vengono introdotte funzionalità fuori perimetro.
 
 ---
 
-## 37. Decisioni consolidate dopo revisione
+## 42. Decisioni consolidate dopo revisione
 
 Le seguenti decisioni sono consolidate in questa versione:
 
@@ -1737,73 +2259,103 @@ Le seguenti decisioni sono consolidate in questa versione:
 2. il bridge deve essere un progetto .NET separato con proprio `.csproj`;
 3. non si usa `src`;
 4. non si usa `models/CicloTimer.Bridge/`;
-5. non si usa `view-models/TimerBridge/` come semplice cartella non progettuale;
-6. il progetto bridge usa target `net9.0`;
-7. il progetto bridge referenzia `CicloTimer.Core`;
-8. il progetto core non referenzia il bridge;
-9. i test bridge referenziano il progetto bridge;
-10. la UI WPF referenzierà il bridge solo in un design successivo;
-11. il nome concettuale del modello è `TimerDisplayModel`;
-12. non viene imposto un wrapper complesso `TimerBridgeResult`;
-13. `SystemActionRequest` resta un concetto, non una classe obbligatoria;
-14. in caso di più errori, il bridge mostra il primo errore della lista;
-15. il formato del tempo resta `mm:ss`;
-16. il bridge produce sempre i testi accessibili previsti dal modello;
-17. il bridge non possiede e non genera tick;
-18. il bridge non mantiene coda storica di eventi;
-19. gli eventi multipli vengono sintetizzati solo se presenti nello stesso `TimerCommandResult`.
+5. non si usa `locales/CicloTimer.Bridge/`;
+6. non si usa `view-models/TimerBridge/` come semplice cartella non progettuale;
+7. il progetto bridge usa target `net9.0`;
+8. il progetto bridge referenzia `CicloTimer.Core`;
+9. il progetto bridge referenzia `CicloTimer.Localization`;
+10. il progetto core non referenzia il bridge;
+11. il progetto localization non referenzia il bridge;
+12. i test bridge referenziano il progetto bridge;
+13. la UI WPF referenzierà il bridge solo in un design successivo;
+14. il nome concettuale del modello è `TimerDisplayModel`;
+15. il bridge restituisce sempre `TimerBridgeUpdate`;
+16. `TimerBridgeUpdate` contiene `TimerDisplayModel` e `SystemActions`;
+17. `SystemActions` è lista vuota quando non ci sono richieste;
+18. `SystemActionRequest` resta concettuale fino al coding plan;
+19. in caso di più errori, il bridge mostra il primo errore della lista;
+20. il formato del tempo resta `mm:ss`;
+21. il bridge usa `TimerCommandResult` per eventi/errori del comando corrente;
+22. il bridge usa `TimerEngine` come fonte primaria dello stato corrente;
+23. il bridge produce sempre i testi accessibili previsti dal modello;
+24. `EventMessageText` e `AccessibleEventText` sono vuoti quando non ci sono eventi;
+25. il bridge non possiede e non genera tick;
+26. il bridge non mantiene coda storica di eventi;
+27. gli eventi multipli vengono sintetizzati solo se presenti nello stesso `TimerCommandResult`;
+28. il bridge usa il template localization per la sintesi sessione completata;
+29. il bridge può produrre azioni concettuali `StartFinalAlertSound` e `StopFinalAlertSound`;
+30. `StopFinalAlertSound` richiede evidenza di avviso finale attivo o sessione in chiusura;
+31. il bridge non esegue audio reale;
+32. il bridge non gestisce audio focus;
+33. il bridge non chiama API Windows;
+34. il bridge espone concettualmente `Configure`, `Start`, `Pause`, `Resume`, `Reset`, `Tick`, `GetCurrentUpdate`.
 
 ---
 
-## 38. Criteri minimi di test futuri
+## 43. Criteri minimi di test futuri
 
 Il futuro coding plan dovrà prevedere test per:
 
-1. conversione minuti/secondi in secondi totali;
-2. formattazione `0 → 00:00`;
-3. formattazione `5 → 00:05`;
-4. formattazione `59 → 00:59`;
-5. formattazione `60 → 01:00`;
-6. formattazione `299 → 04:59`;
-7. formattazione `3600 → 60:00`;
-8. trasformazione `Stopped → Timer fermo`;
-9. trasformazione `Running → Sessione in corso`;
-10. trasformazione `FinalAlert → Avviso finale in corso`;
-11. trasformazione `Paused → Timer in pausa`;
-12. trasformazione errori core in messaggi utente;
-13. scelta del primo errore in caso di più errori;
-14. trasformazione eventi core in messaggi evento;
-15. sintesi evento sessione completata con contatore solo se eventi presenti nello stesso result;
-16. mancata sintesi di eventi provenienti da result separati;
-17. calcolo `PrimaryActionText`;
-18. esposizione `CanStart`, `CanPause`, `CanResume`, `CanReset`;
-19. produzione costante di `AccessibleStatusText`;
-20. produzione costante di `AccessibleEventText`;
-21. assenza di dipendenze WPF;
-22. assenza di dipendenze audio;
-23. assenza di dipendenze Windows API;
-24. assenza di timer reali nel bridge;
-25. assenza di generazione autonoma di tick;
-26. assenza di modifiche al core;
-27. assenza di duplicazione della validazione logica;
-28. produzione di richiesta `StartFinalAlertSound` su `FinalAlertStarted`;
-29. produzione di richiesta `StopFinalAlertSound` su fine sessione o pausa in avviso finale;
-30. mancata produzione di annunci automatici a ogni tick;
-31. gestione coerente di result con eventi vuoti;
-32. gestione coerente di result con errori;
-33. corretta dipendenza `CicloTimer.Bridge → CicloTimer.Core`;
-34. assenza di dipendenza da progetto WPF nei test bridge.
+1. creazione progetto bridge in `view-models/CicloTimer.Bridge/`;
+2. target `net9.0`;
+3. dipendenza da `CicloTimer.Core`;
+4. dipendenza da `CicloTimer.Localization`;
+5. assenza di dipendenza da WPF;
+6. assenza di dipendenza da API Windows;
+7. assenza di dipendenza da audio reale;
+8. conversione minuti/secondi in secondi totali;
+9. formattazione `0 → 00:00`;
+10. formattazione `5 → 00:05`;
+11. formattazione `59 → 00:59`;
+12. formattazione `60 → 01:00`;
+13. formattazione `299 → 04:59`;
+14. formattazione `3600 → 60:00`;
+15. trasformazione `Stopped → TimerTextKey.StateStopped → Timer fermo`;
+16. trasformazione `Running → TimerTextKey.StateRunning → Sessione in corso`;
+17. trasformazione `FinalAlert → TimerTextKey.StateFinalAlert → Avviso finale in corso`;
+18. trasformazione `Paused → TimerTextKey.StatePaused → Timer in pausa`;
+19. trasformazione errori core in messaggi utente via `ErrorTextKey`;
+20. scelta del primo errore in caso di più errori;
+21. trasformazione eventi core in messaggi evento via `TimerTextKey`;
+22. sintesi evento sessione completata con contatore solo se eventi presenti nello stesso result;
+23. mancata sintesi di eventi provenienti da result separati;
+24. uso di `AccessibilityTextKey.SessionCompletedTemplate` o chiave equivalente;
+25. calcolo `PrimaryActionText` via `CommandTextKey`;
+26. esposizione `CanStart`, `CanPause`, `CanResume`, `CanReset`;
+27. produzione costante di `AccessibleStatusText`;
+28. produzione di `AccessibleEventText` vuoto quando non ci sono eventi;
+29. produzione costante di `TimerBridgeUpdate`;
+30. produzione di `SystemActions` come lista vuota quando non ci sono richieste;
+31. assenza di stringhe utente hardcoded nel bridge;
+32. assenza di stringhe libere come chiavi localization;
+33. assenza di `ToString()` sugli enum core per chiavi localization;
+34. assenza di reflection sugli enum core per chiavi localization;
+35. assenza di timer reali nel bridge;
+36. assenza di generazione autonoma di tick;
+37. assenza di modifiche al core;
+38. assenza di modifiche a localization;
+39. produzione di richiesta `StartFinalAlertSound` su `FinalAlertStarted`;
+40. produzione di richiesta `StopFinalAlertSound` su fine sessione;
+41. produzione di richiesta `StopFinalAlertSound` su pausa durante avviso finale;
+42. produzione di richiesta `StopFinalAlertSound` su reset durante avviso finale;
+43. non produzione di `StopFinalAlertSound` quando non c'è evidenza di avviso finale attivo;
+44. mancata produzione di annunci automatici a ogni tick;
+45. gestione coerente di result con eventi vuoti;
+46. gestione coerente di result con errori;
+47. corretta dipendenza `CicloTimer.Bridge → CicloTimer.Core`;
+48. corretta dipendenza `CicloTimer.Bridge → CicloTimer.Localization`;
+49. assenza di dipendenza da progetto WPF nei test bridge.
 
 ---
 
-## 39. Stato del documento
+## 44. Stato del documento
 
 Questo documento è approvato come Design 002 — Bridge UI-logica e modello mostrabile del timer.
 
 Versione corrente:
 
 ```text
-0.3.0 — aggiornamento strutturale per progetto .NET separato in view-models/CicloTimer.Bridge/
+0.5.0 — approvazione dopo revisione DeepSeek/Gemini su integrazione Localization e azioni audio concettuali
 ```
 
 Cronologia:
@@ -1812,6 +2364,8 @@ Cronologia:
 0.1.0 — prima bozza ChatGPT con collocazione vincolante in view-models
 0.2.0 — integrazione delle osservazioni dei consiglieri AI: collocazione view-models/TimerBridge/, divieto di tick generati dal bridge, produzione costante dei testi accessibili, sintesi eventi solo nello stesso TimerCommandResult e conferma del modello TimerDisplayModel
 0.3.0 — revisione dopo chiarimento su struttura C#/.NET: il bridge diventa progetto separato in view-models/CicloTimer.Bridge/ con dipendenza da CicloTimer.Core
+0.4.0 — revisione dopo Design 003: il bridge usa CicloTimer.Localization, vieta stringhe hardcoded/stringhe magiche/ToString/reflection e produce richieste audio concettuali senza implementare audio reale
+0.5.0 — integrazione osservazioni consiglieri: TimerBridgeUpdate sempre restituito, SystemActions sempre presente, sincronizzazione TimerCommandResult/TimerEngine chiarita, StopFinalAlertSound prodotto solo con evidenza di avviso finale attivo, template localization esplicitato, EventMessageText e AccessibleEventText vuoti senza eventi
 ```
 
 Il documento è stato revisionato dal consiglio AI formato da:
@@ -1822,20 +2376,17 @@ DeepSeek
 Gemini
 ```
 
-Le decisioni integrate sono:
+Le osservazioni integrate sono:
 
-1. chiarimento che il bridge non genera tick e non possiede sorgente temporale;
-2. scelta del progetto separato `view-models/CicloTimer.Bridge/`;
-3. conferma del nome `TimerDisplayModel`;
-4. conferma della non obbligatorietà di un wrapper complesso `TimerBridgeResult`;
-5. conferma di `SystemActionRequest` come concetto e non tipo obbligatorio;
-6. scelta del primo errore della lista in caso di errori multipli;
-7. produzione costante di `AccessibleStatusText` e `AccessibleEventText`;
-8. chiarimento che gli eventi multipli possono essere sintetizzati solo se presenti nello stesso `TimerCommandResult`;
-9. conferma del formato tempo `mm:ss`;
-10. conferma del divieto di UI, XAML, WPF, NVDA, UI Automation, audio reale, API Windows e timer reali nel bridge;
-11. chiarimento della catena di dipendenze `ciclotimer WPF → CicloTimer.Bridge → CicloTimer.Core` per i futuri design;
-12. chiarimento che i test del bridge devono referenziare il progetto bridge e non il progetto WPF.
+1. chiarimento che il bridge usa `TimerCommandResult` per eventi/errori del comando corrente;
+2. chiarimento che il bridge usa `TimerEngine` come fonte primaria dello stato corrente;
+3. introduzione di `TimerBridgeUpdate` come output sempre restituito;
+4. obbligo di `SystemActions` sempre presente, anche come lista vuota;
+5. chiarimento che `StopFinalAlertSound` richiede evidenza di avviso finale attivo o sessione in chiusura;
+6. esplicitazione dell'uso di `AccessibilityTextKey.SessionCompletedTemplate` o chiave equivalente per la sintesi sessione completata;
+7. chiarimento che `EventMessageText` e `AccessibleEventText` sono `string.Empty` quando non ci sono eventi;
+8. aggiunta dell'interfaccia concettuale del bridge;
+9. conferma del formato `mm:ss`;
+10. esclusione di eventi C#, code persistenti, `Channel`, event bus, audio reale, audio focus e API Windows dal bridge.
 
 Il documento è approvato dal project owner come base per il successivo coding plan del Bridge UI-logica.
-
