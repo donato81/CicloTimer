@@ -53,6 +53,7 @@ public enum AccessibilityTextKey
 
 public enum UiTextKey
 {
+    AppTitle,
     SessionDuration,
     FinalAlertDuration,
     Minutes,

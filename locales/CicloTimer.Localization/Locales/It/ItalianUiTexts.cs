@@ -4,6 +4,7 @@ public static class ItalianUiTexts
 {
     public static string Get(UiTextKey key) => key switch
     {
+        UiTextKey.AppTitle => "CicloTimer",
         UiTextKey.SessionDuration => "Durata sessione",
         UiTextKey.FinalAlertDuration => "Durata avviso finale",
         UiTextKey.Minutes => "Minuti",

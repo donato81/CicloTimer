@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>CicloTimer.Views</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\view-models\CicloTimer.ViewModels\CicloTimer.ViewModels.csproj" />
+    <ProjectReference Include="..\..\services\CicloTimer.App\CicloTimer.App.csproj" />
+    <ProjectReference Include="..\..\services\CicloTimer.Audio\CicloTimer.Audio.csproj" />
+    <ProjectReference Include="..\..\view-models\CicloTimer.Bridge\CicloTimer.Bridge.csproj" />
+    <ProjectReference Include="..\..\locales\CicloTimer.Localization\CicloTimer.Localization.csproj" />
+  </ItemGroup>
+
+</Project>

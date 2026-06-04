@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CicloTimer.ViewModels</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\services\CicloTimer.App\CicloTimer.App.csproj" />
+    <ProjectReference Include="..\..\view-models\CicloTimer.Bridge\CicloTimer.Bridge.csproj" />
+    <ProjectReference Include="..\..\locales\CicloTimer.Localization\CicloTimer.Localization.csproj" />
+  </ItemGroup>
+</Project>

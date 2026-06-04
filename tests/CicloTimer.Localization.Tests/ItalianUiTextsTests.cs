@@ -5,6 +5,7 @@ namespace CicloTimer.Localization.Tests;
 public sealed class ItalianUiTextsTests
 {
     [Theory]
+    [InlineData(UiTextKey.AppTitle, "CicloTimer")]
     [InlineData(UiTextKey.SessionDuration, "Durata sessione")]
     [InlineData(UiTextKey.FinalAlertDuration, "Durata avviso finale")]
     [InlineData(UiTextKey.Minutes, "Minuti")]
