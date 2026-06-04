@@ -14,6 +14,12 @@ internal sealed class FakeTimerAppOrchestrator : ITimerAppOrchestrator
     private int _maxConcurrentTicks;
     private bool _disposed;
 
+    public event EventHandler<TimerAppStateChangedEventArgs>? StateChanged
+    {
+        add { }
+        remove { }
+    }
+
     public TimerAppState CurrentState { get; private set; } = new(
         TestModelFactory.Create("runner"),
         LastAudioResult: null,

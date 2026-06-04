@@ -11,6 +11,8 @@ public sealed class TimerAppOrchestrator : ITimerAppOrchestrator
     private TimerAppState currentState;
     private bool disposed;
 
+    public event EventHandler<TimerAppStateChangedEventArgs>? StateChanged;
+
     public TimerAppOrchestrator(
         ITimerBridgePort bridge,
         IAudioServicePort audioService)
@@ -96,6 +98,8 @@ public sealed class TimerAppOrchestrator : ITimerAppOrchestrator
 
     private AppCommandResult ExecuteCommand(Func<TimerBridgeUpdate> command)
     {
+        TimerAppStateChangedEventArgs? stateChangedArgs = null;
+
         lock (_sync)
         {
             if (disposed)
@@ -127,8 +131,11 @@ public sealed class TimerAppOrchestrator : ITimerAppOrchestrator
                 dispatchResult.LastAudioResult,
                 result);
 
-            return result;
+            stateChangedArgs = new TimerAppStateChangedEventArgs(currentState, result);
         }
+
+        StateChanged?.Invoke(this, stateChangedArgs!);
+        return stateChangedArgs!.Result;
     }
 
     private AppCommandResult BuildTechnicalFailureResult(
