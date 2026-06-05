@@ -1,11 +1,15 @@
 <UserControl x:Class="CicloTimer.Views.Controls.NumericStepControl"
              x:Name="Root"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="True"
+             IsTabStop="True"
+             KeyDown="Root_KeyDown">
     <StackPanel>
         <TextBlock Text="{Binding Label, ElementName=Root}"
                    FontWeight="SemiBold"
-                   Margin="0,0,0,6" />
+                   Margin="0,0,0,6"
+                   Focusable="False" />
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="44" />
@@ -16,7 +20,9 @@
             <Button Grid.Column="0"
                     Content="-"
                     Click="DecreaseButton_Click"
-                    MinHeight="34" />
+                    MinHeight="34"
+                    IsTabStop="False"
+                    AutomationProperties.Name="{Binding DecreaseAccessibleName, ElementName=Root}" />
             <Border Grid.Column="1"
                     Margin="8,0"
                     Padding="10,6"
@@ -33,7 +39,9 @@
             <Button Grid.Column="2"
                     Content="+"
                     Click="IncreaseButton_Click"
-                    MinHeight="34" />
+                    MinHeight="34"
+                    IsTabStop="False"
+                    AutomationProperties.Name="{Binding IncreaseAccessibleName, ElementName=Root}" />
         </Grid>
     </StackPanel>
 </UserControl>

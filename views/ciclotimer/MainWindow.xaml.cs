@@ -37,4 +37,10 @@ public partial class MainWindow : Window
             disposable.Dispose();
         }
     }
+
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        // Set initial focus to first interactive control (Session Duration Minutes)
+        SessionMinutesControl?.Focus();
+    }
 }

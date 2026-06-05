@@ -33,6 +33,7 @@ public sealed class MainTimerViewModel : INotifyPropertyChanged, IDisposable
     private string timerStateText = string.Empty;
     private string completedSessionsText = string.Empty;
     private string primaryButtonText = string.Empty;
+    private string eventMessageText = string.Empty;
     private bool canStart;
     private bool canPause;
     private bool canResume;
@@ -65,6 +66,10 @@ public sealed class MainTimerViewModel : INotifyPropertyChanged, IDisposable
         ResetButtonText = this.localization.GetCommandText(CommandTextKey.Reset);
         PrimaryButtonText = this.localization.GetCommandText(CommandTextKey.Start);
 
+        SessionDurationMinutesAccessibleName = this.localization.GetAccessibilityText(AccessibilityTextKey.SessionDurationMinutes);
+        SessionDurationSecondsAccessibleName = this.localization.GetAccessibilityText(AccessibilityTextKey.SessionDurationSeconds);
+        FinalAlertDurationSecondsAccessibleName = this.localization.GetAccessibilityText(AccessibilityTextKey.FinalAlertDurationSeconds);
+
         this.orchestrator.StateChanged += OnOrchestratorStateChanged;
         ValidateConfiguration();
         ConfigureCurrentValues();
@@ -82,6 +87,9 @@ public sealed class MainTimerViewModel : INotifyPropertyChanged, IDisposable
     public string CompletedSessionsLabel { get; }
     public string MessageLabel { get; }
     public string ResetButtonText { get; }
+    public string SessionDurationMinutesAccessibleName { get; }
+    public string SessionDurationSecondsAccessibleName { get; }
+    public string FinalAlertDurationSecondsAccessibleName { get; }
 
     public ICommand PrimaryCommand => primaryCommand;
     public ICommand ResetCommand => resetCommand;
@@ -169,6 +177,20 @@ public sealed class MainTimerViewModel : INotifyPropertyChanged, IDisposable
         private set => SetProperty(ref primaryButtonText, value);
     }
 
+    public string EventMessageText
+    {
+        get => eventMessageText;
+        private set
+        {
+            if (SetProperty(ref eventMessageText, value))
+            {
+                OnPropertyChanged(nameof(HasEventMessage));
+            }
+        }
+    }
+
+    public bool HasEventMessage => !string.IsNullOrWhiteSpace(EventMessageText);
+
     public bool CanExecutePrimaryCommand => CanRunPrimaryCommand();
 
     public bool CanExecuteResetCommand => !isDisposed && canReset;
@@ -248,6 +270,7 @@ public sealed class MainTimerViewModel : INotifyPropertyChanged, IDisposable
 
         runner.Stop();
         ApplyResult(orchestrator.Reset());
+        EventMessageText = localization.GetTimerText(TimerTextKey.EventTimerReset);
     }
 
     private void Start()
@@ -279,6 +302,7 @@ public sealed class MainTimerViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        EventMessageText = localization.GetTimerText(TimerTextKey.EventTimerStarted);
         runner.Start();
     }
 
@@ -289,6 +313,7 @@ public sealed class MainTimerViewModel : INotifyPropertyChanged, IDisposable
         if (string.IsNullOrWhiteSpace(result.CurrentModel.ErrorMessageText)
             && !result.HasTechnicalError)
         {
+            EventMessageText = localization.GetTimerText(TimerTextKey.EventTimerPaused);
             runner.Stop();
         }
     }
@@ -300,6 +325,7 @@ public sealed class MainTimerViewModel : INotifyPropertyChanged, IDisposable
         if (string.IsNullOrWhiteSpace(result.CurrentModel.ErrorMessageText)
             && !result.HasTechnicalError)
         {
+            EventMessageText = localization.GetTimerText(TimerTextKey.EventTimerResumed);
             runner.Start();
         }
     }

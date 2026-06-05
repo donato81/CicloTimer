@@ -49,6 +49,27 @@ public partial class NumericStepControl : UserControl
             typeof(NumericStepControl),
             new PropertyMetadata(string.Empty));
 
+    public static readonly DependencyProperty AccessibleNameProperty =
+        DependencyProperty.Register(
+            nameof(AccessibleName),
+            typeof(string),
+            typeof(NumericStepControl),
+            new PropertyMetadata(string.Empty, OnAccessibleNameChanged));
+
+    public static readonly DependencyProperty IncreaseAccessibleNameProperty =
+        DependencyProperty.Register(
+            nameof(IncreaseAccessibleName),
+            typeof(string),
+            typeof(NumericStepControl),
+            new PropertyMetadata(string.Empty));
+
+    public static readonly DependencyProperty DecreaseAccessibleNameProperty =
+        DependencyProperty.Register(
+            nameof(DecreaseAccessibleName),
+            typeof(string),
+            typeof(NumericStepControl),
+            new PropertyMetadata(string.Empty));
+
     public NumericStepControl()
     {
         InitializeComponent();
@@ -84,6 +105,24 @@ public partial class NumericStepControl : UserControl
         set => SetValue(LabelProperty, value);
     }
 
+    public string AccessibleName
+    {
+        get => (string)GetValue(AccessibleNameProperty);
+        set => SetValue(AccessibleNameProperty, value);
+    }
+
+    public string IncreaseAccessibleName
+    {
+        get => (string)GetValue(IncreaseAccessibleNameProperty);
+        set => SetValue(IncreaseAccessibleNameProperty, value);
+    }
+
+    public string DecreaseAccessibleName
+    {
+        get => (string)GetValue(DecreaseAccessibleNameProperty);
+        set => SetValue(DecreaseAccessibleNameProperty, value);
+    }
+
     private static void OnValueChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs args)
     {
         var control = (NumericStepControl)dependencyObject;
@@ -92,6 +131,9 @@ public partial class NumericStepControl : UserControl
         {
             control.SetCurrentValue(ValueProperty, clamped);
         }
+
+        // Update automation name to include value for screen readers
+        control.UpdateAutomationName();
     }
 
     private static void OnLimitChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs args)
@@ -120,6 +162,72 @@ public partial class NumericStepControl : UserControl
     {
         SetCurrentValue(ValueProperty, Clamp(Value + Step));
         BindingOperations.GetBindingExpression(this, ValueProperty)?.UpdateSource();
+    }
+
+    private static void OnAccessibleNameChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs args)
+    {
+        var control = (NumericStepControl)dependencyObject;
+        control.UpdateAutomationName();
+    }
+
+    private void UpdateAutomationName()
+    {
+        // Combine accessible name with current value for screen readers
+        var fullName = string.IsNullOrEmpty(AccessibleName)
+            ? Value.ToString()
+            : $"{AccessibleName} {Value}";
+        System.Windows.Automation.AutomationProperties.SetName(this, fullName);
+    }
+
+    private void Root_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        bool handled = false;
+
+        switch (e.Key)
+        {
+            case System.Windows.Input.Key.Up:
+            case System.Windows.Input.Key.Right:
+                SetCurrentValue(ValueProperty, Clamp(Value + Step));
+                BindingOperations.GetBindingExpression(this, ValueProperty)?.UpdateSource();
+                handled = true;
+                break;
+
+            case System.Windows.Input.Key.Down:
+            case System.Windows.Input.Key.Left:
+                SetCurrentValue(ValueProperty, Clamp(Value - Step));
+                BindingOperations.GetBindingExpression(this, ValueProperty)?.UpdateSource();
+                handled = true;
+                break;
+
+            case System.Windows.Input.Key.PageUp:
+                SetCurrentValue(ValueProperty, Clamp(Value + (Step * 10)));
+                BindingOperations.GetBindingExpression(this, ValueProperty)?.UpdateSource();
+                handled = true;
+                break;
+
+            case System.Windows.Input.Key.PageDown:
+                SetCurrentValue(ValueProperty, Clamp(Value - (Step * 10)));
+                BindingOperations.GetBindingExpression(this, ValueProperty)?.UpdateSource();
+                handled = true;
+                break;
+
+            case System.Windows.Input.Key.Home:
+                SetCurrentValue(ValueProperty, Minimum);
+                BindingOperations.GetBindingExpression(this, ValueProperty)?.UpdateSource();
+                handled = true;
+                break;
+
+            case System.Windows.Input.Key.End:
+                SetCurrentValue(ValueProperty, Maximum);
+                BindingOperations.GetBindingExpression(this, ValueProperty)?.UpdateSource();
+                handled = true;
+                break;
+        }
+
+        if (handled)
+        {
+            e.Handled = true;
+        }
     }
 
     private int Clamp(int value)

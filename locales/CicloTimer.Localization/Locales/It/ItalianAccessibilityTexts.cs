@@ -11,6 +11,9 @@ public static class ItalianAccessibilityTexts
         AccessibilityTextKey.PauseTimer => "Metti in pausa il timer",
         AccessibilityTextKey.ResumeTimer => "Riprendi timer",
         AccessibilityTextKey.ResetTimer => "Resetta timer",
+        AccessibilityTextKey.SessionDurationMinutes => "Durata sessione, minuti",
+        AccessibilityTextKey.SessionDurationSeconds => "Durata sessione, secondi",
+        AccessibilityTextKey.FinalAlertDurationSeconds => "Durata avviso finale, secondi",
         _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Accessibility text key is not supported.")
     };
 }

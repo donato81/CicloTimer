@@ -68,7 +68,6 @@ public sealed class ProjectDependencyTests
             "System.Timers.Timer",
             "System.Threading.Timer",
             "Task.Delay",
-            "LiveSetting",
             "LiveRegion"
         ];
 
@@ -76,6 +75,10 @@ public sealed class ProjectDependencyTests
         {
             Assert.DoesNotContain(forbiddenText, source, StringComparison.Ordinal);
         }
+
+        // AutomationProperties.LiveSetting is allowed for accessibility (block 008)
+        // but verify it's used appropriately (Off, Polite, Assertive only)
+        Assert.DoesNotContain("LiveSetting=\"Aggressive\"", source, StringComparison.Ordinal);
     }
 
     [Fact]

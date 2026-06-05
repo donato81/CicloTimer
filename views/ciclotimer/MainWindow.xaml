@@ -9,8 +9,12 @@
         MinHeight="560"
         ResizeMode="CanMinimize"
         Background="#FFF4F7FB"
-        Closed="Window_Closed">
+        Closed="Window_Closed"
+        Loaded="Window_Loaded"
+        KeyboardNavigation.TabNavigation="Cycle">
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        
         <Style x:Key="CardStyle" TargetType="Border">
             <Setter Property="Background" Value="#FFFFFFFF" />
             <Setter Property="BorderBrush" Value="#FFE1E7EF" />
@@ -54,7 +58,8 @@
                        FontWeight="Bold"
                        Foreground="#FF1F2937"
                        HorizontalAlignment="Center"
-                       Margin="0,0,0,18" />
+                       Margin="0,0,0,18"
+                       Focusable="False" />
 
             <Border Style="{StaticResource CardStyle}"
                     IsEnabled="{Binding CanEditConfiguration}">
@@ -69,26 +74,33 @@
                         </Grid.ColumnDefinitions>
 
                         <controls:NumericStepControl Grid.Column="0"
+                                                     x:Name="SessionMinutesControl"
                                                      Label="{Binding MinutesLabel}"
+                                                     AccessibleName="{Binding SessionDurationMinutesAccessibleName}"
                                                      Value="{Binding CycleMinutes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                      Minimum="0"
                                                      Maximum="999"
-                                                     Step="1" />
+                                                     Step="1"
+                                                     TabIndex="0" />
                         <controls:NumericStepControl Grid.Column="2"
                                                      Label="{Binding SecondsLabel}"
+                                                     AccessibleName="{Binding SessionDurationSecondsAccessibleName}"
                                                      Value="{Binding CycleSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                      Minimum="0"
                                                      Maximum="59"
-                                                     Step="1" />
+                                                     Step="1"
+                                                     TabIndex="1" />
                     </Grid>
 
                     <Separator Margin="0,16" />
 
                     <controls:NumericStepControl Label="{Binding FinalAlertDurationLabel}"
+                                                 AccessibleName="{Binding FinalAlertDurationSecondsAccessibleName}"
                                                  Value="{Binding FinalAlertSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                  Minimum="0"
                                                  Maximum="60"
-                                                 Step="1" />
+                                                 Step="1"
+                                                 TabIndex="2" />
                 </StackPanel>
             </Border>
 
@@ -96,13 +108,17 @@
                 <StackPanel>
                     <TextBlock Text="{Binding RemainingTimeLabel}"
                                Style="{StaticResource CardTitleStyle}"
-                               HorizontalAlignment="Center" />
+                               HorizontalAlignment="Center"
+                               Focusable="False" />
                     <TextBlock Text="{Binding RemainingTimeText}"
                                FontSize="54"
                                FontWeight="Bold"
                                Foreground="#FF111827"
                                HorizontalAlignment="Center"
-                               Margin="0,4,0,0" />
+                               Margin="0,4,0,0"
+                               AutomationProperties.Name="{Binding RemainingTimeLabel}"
+                               AutomationProperties.LiveSetting="Off"
+                               Focusable="False" />
                 </StackPanel>
             </Border>
 
@@ -117,30 +133,49 @@
                     <Button Grid.Column="0"
                             Content="{Binding PrimaryButtonText}"
                             Command="{Binding PrimaryCommand}"
-                            Style="{StaticResource PrimaryButtonStyle}" />
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            AutomationProperties.Name="{Binding PrimaryButtonText}"
+                            TabIndex="3" />
                     <Button Grid.Column="2"
                             Content="{Binding ResetButtonText}"
                             Command="{Binding ResetCommand}"
                             MinWidth="96"
                             MinHeight="42"
-                            Padding="16,8" />
+                            Padding="16,8"
+                            AutomationProperties.Name="{Binding ResetButtonText}"
+                            TabIndex="4" />
                 </Grid>
             </Border>
 
             <Border Style="{StaticResource CardStyle}">
                 <StackPanel>
                     <TextBlock Text="{Binding TimerStateLabel}"
-                               Style="{StaticResource CardTitleStyle}" />
+                               Style="{StaticResource CardTitleStyle}"
+                               Focusable="False" />
                     <TextBlock Text="{Binding TimerStateText}"
                                FontSize="16"
                                Foreground="#FF374151"
-                               Margin="0,0,0,8" />
+                               Margin="0,0,0,8"
+                               AutomationProperties.Name="{Binding TimerStateLabel}"
+                               Focusable="False" />
                     <TextBlock Text="{Binding CompletedSessionsText}"
                                FontSize="16"
                                Foreground="#FF374151"
-                               Margin="0,0,0,8" />
+                               Margin="0,0,0,8"
+                               AutomationProperties.Name="{Binding CompletedSessionsLabel}"
+                               Focusable="False" />
+                    <TextBlock x:Name="EventMessageText"
+                               Text="{Binding EventMessageText}"
+                               FontSize="16"
+                               Foreground="#FF374151"
+                               Margin="0,0,0,8"
+                               AutomationProperties.LiveSetting="Polite"
+                               Focusable="False"
+                               Visibility="{Binding HasEventMessage, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <TextBlock Text="{Binding ValidationErrorText}"
-                               Style="{StaticResource ErrorTextStyle}" />
+                               Style="{StaticResource ErrorTextStyle}"
+                               AutomationProperties.LiveSetting="Assertive"
+                               Focusable="False" />
                 </StackPanel>
             </Border>
         </StackPanel>

@@ -48,7 +48,10 @@ public enum AccessibilityTextKey
     StartTimer,
     PauseTimer,
     ResumeTimer,
-    ResetTimer
+    ResetTimer,
+    SessionDurationMinutes,
+    SessionDurationSeconds,
+    FinalAlertDurationSeconds
 }
 
 public enum UiTextKey
