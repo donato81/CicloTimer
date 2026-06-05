@@ -9,6 +9,6 @@ public sealed class NullAudioFocusManager : IAudioFocusManager
 
     public AudioActionResult TryRestoreFocus()
     {
-        return AudioActionResult.Success;
+    return AudioActionResult.Success;
     }
 }
