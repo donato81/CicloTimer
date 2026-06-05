@@ -6,7 +6,7 @@
 * Codice: 008
 * Titolo: Accessibilità UI e rifinitura interazione
 * Versione: 0.2.0
-* Stato: APPROVATO
+* Stato: APPROVED
 * Progetto: CicloTimer
 * Repository: donato81/CicloTimer
 * Data: 2026-06-05
