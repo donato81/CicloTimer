@@ -32,6 +32,7 @@ public sealed class MainTimerViewModel : INotifyPropertyChanged, IDisposable
     private string remainingTimeText = string.Empty;
     private string timerStateText = string.Empty;
     private string completedSessionsText = string.Empty;
+    private string timerAccessibilitySummary = string.Empty;
     private string primaryButtonText = string.Empty;
     private string eventMessageText = string.Empty;
     private bool canStart;
@@ -156,19 +157,43 @@ public sealed class MainTimerViewModel : INotifyPropertyChanged, IDisposable
     public string RemainingTimeText
     {
         get => remainingTimeText;
-        private set => SetProperty(ref remainingTimeText, value);
+        private set
+        {
+            if (SetProperty(ref remainingTimeText, value))
+            {
+                RefreshTimerAccessibilitySummary();
+            }
+        }
     }
 
     public string TimerStateText
     {
         get => timerStateText;
-        private set => SetProperty(ref timerStateText, value);
+        private set
+        {
+            if (SetProperty(ref timerStateText, value))
+            {
+                RefreshTimerAccessibilitySummary();
+            }
+        }
     }
 
     public string CompletedSessionsText
     {
         get => completedSessionsText;
-        private set => SetProperty(ref completedSessionsText, value);
+        private set
+        {
+            if (SetProperty(ref completedSessionsText, value))
+            {
+                RefreshTimerAccessibilitySummary();
+            }
+        }
+    }
+
+    public string TimerAccessibilitySummary
+    {
+        get => timerAccessibilitySummary;
+        private set => SetProperty(ref timerAccessibilitySummary, value);
     }
 
     public string PrimaryButtonText
@@ -414,6 +439,16 @@ public sealed class MainTimerViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(CanExecutePrimaryCommand));
         OnPropertyChanged(nameof(CanExecuteResetCommand));
         OnPropertyChanged(nameof(CanEditConfiguration));
+    }
+
+    private void RefreshTimerAccessibilitySummary()
+    {
+        TimerAccessibilitySummary = localization.GetAccessibilityText(
+            AccessibilityTextKey.StatusTemplate,
+            null,
+            RemainingTimeText,
+            TimerStateText,
+            CompletedSessionsText);
     }
 
     private bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
